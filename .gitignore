@@ -14,3 +14,6 @@ agy-*.md
 
 # owner-provided source material (the BGM is shipped from public/audio)
 追加資料/
+
+# image generator logs
+.codex-image.log
