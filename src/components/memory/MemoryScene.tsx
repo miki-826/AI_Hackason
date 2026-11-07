@@ -6,10 +6,9 @@ import * as THREE from "three";
 import {
   FURNITURE_DEFINITIONS,
   furnitureTypeFromId,
-  MEMORY_STAGE_POINTS,
   MEMORY_TARGETS,
 } from "@/game-core/definitions/furniture";
-import type { ActorId, MemoryAction, MemoryEvent, MemoryTargetId, Vec3 } from "@/game-core/types";
+import type { ActorId, MemoryEvent, MemoryTargetId, Vec3 } from "@/game-core/types";
 import type { QualityPreset } from "@/stores/settings";
 import { useGameStore, type MemoryPlayback } from "@/stores/gameStore";
 import {
@@ -21,6 +20,7 @@ import {
   MirrorModel,
 } from "@/components/game/furniture/FurnitureModels";
 import { narrator } from "@/lib/audio/narrator";
+import { MemoryActor, SEATS } from "./MemoryActor";
 import { floorMaterial, plainMaterial, PALETTE, wallMaterial, woodMaterial } from "@/components/game/materials";
 
 /**
@@ -29,14 +29,8 @@ import { floorMaterial, plainMaterial, PALETTE, wallMaterial, woodMaterial } fro
  */
 const SET = { w: 7.4, d: 7.4, h: 3.2 };
 
-const SEATS: Record<ActorId, { pos: Vec3; yaw: number }> = {
-  adult_a: { pos: [-1.2, 0, 0], yaw: Math.PI / 2 },
-  adult_b: { pos: [1.2, 0, 0], yaw: -Math.PI / 2 },
-  child_a: { pos: [-0.35, 0, -0.85], yaw: 0 },
-  protagonist: { pos: [0.45, 0, -0.85], yaw: 0 },
-};
 
-const STANDING_ACTIONS: ReadonlySet<MemoryAction> = new Set(["STAND_UP", "CHECK_CLOCK", "PLACE_LETTER", "OPEN_DRAWER"]);
+
 
 // ------------------------------------------------------------------ set --
 const MemorySet = memo(function MemorySet() {
@@ -158,112 +152,6 @@ const MemorySet = memo(function MemorySet() {
   );
 });
 
-// ---------------------------------------------------------------- actor --
-type ActorShape = { torso: THREE.LatheGeometry; head: THREE.SphereGeometry; limb: THREE.CapsuleGeometry; arm: THREE.CapsuleGeometry };
-
-/** Stylised human figure: lathe torso with shoulders, ellipsoid head, capsule limbs. */
-function useActorShape(): ActorShape {
-  return useMemo(() => {
-    const profile = [
-      [0.0, 0.84],
-      [0.15, 0.86],
-      [0.165, 0.95],
-      [0.15, 1.1],
-      [0.17, 1.28],
-      [0.2, 1.38],
-      [0.16, 1.44],
-      [0.065, 1.47],
-      [0.06, 1.56],
-      [0.0, 1.58],
-    ].map(([x, y]) => new THREE.Vector2(x, y));
-    const torso = new THREE.LatheGeometry(profile, 24);
-    torso.scale(1, 1, 0.68);
-    const head = new THREE.SphereGeometry(0.1, 24, 18);
-    head.scale(0.9, 1.15, 1);
-    return {
-      torso,
-      head,
-      limb: new THREE.CapsuleGeometry(0.06, 0.72, 6, 12),
-      arm: new THREE.CapsuleGeometry(0.042, 0.52, 6, 12),
-    };
-  }, []);
-}
-
-function MemoryActor({ id, shape, scale }: { id: ActorId; shape: ActorShape; scale: number }) {
-  const group = useRef<THREE.Group>(null);
-  const material = useMemo(
-    () =>
-      new THREE.MeshStandardMaterial({
-        color: "#ffd29a",
-        emissive: "#ff9a3c",
-        emissiveIntensity: 0.5,
-        transparent: true,
-        opacity: 0.5,
-        roughness: 0.6,
-        depthWrite: false,
-      }),
-    [],
-  );
-  useEffect(() => () => material.dispose(), [material]);
-  const seat = SEATS[id];
-
-  const legL = useRef<THREE.Group>(null);
-  const legR = useRef<THREE.Group>(null);
-  const armL = useRef<THREE.Group>(null);
-  const armR = useRef<THREE.Group>(null);
-  useFrame(({ clock }, delta) => {
-    const g = group.current;
-    if (!g) return;
-    const m = useGameStore.getState().memory;
-    const event = m ? m.story.events[m.eventIndex] : undefined;
-    const isActive = event?.actorId === id;
-    const stage = isActive && event?.cameraTargetId ? MEMORY_STAGE_POINTS[event.cameraTargetId] : undefined;
-    const target = stage ?? seat.pos;
-    const atHome = !stage;
-    const seated = atHome && !(isActive && event && STANDING_ACTIONS.has(event.action));
-    const k = 1 - Math.exp(-2.4 * delta);
-    g.position.x += (target[0] - g.position.x) * k;
-    g.position.z += (target[2] - g.position.z) * k;
-    const targetY = seated ? -0.4 * scale : 0;
-    g.position.y += (targetY - g.position.y) * k;
-    // legs fold forward when seated; arms rest on the table or hang
-    const legX = seated ? -Math.PI / 2 : 0;
-    const walk = !seated && Math.hypot(target[0] - g.position.x, target[2] - g.position.z) > 0.05 ? Math.sin(clock.elapsedTime * 7) * 0.35 : 0;
-    if (legL.current) legL.current.rotation.x += (legX + walk - legL.current.rotation.x) * k;
-    if (legR.current) legR.current.rotation.x += (legX - walk - legR.current.rotation.x) * k;
-    const armX = seated ? -1.1 : isActive && event?.action === "PLACE_LETTER" ? -1.2 : -walk * 0.6;
-    if (armL.current) armL.current.rotation.x += (armX - armL.current.rotation.x) * k;
-    if (armR.current) armR.current.rotation.x += (armX - armR.current.rotation.x) * k;
-    // face what the event is about, else the table
-    const look = isActive && event?.cameraTargetId ? MEMORY_TARGETS[event.cameraTargetId] : MEMORY_TARGETS.dining_table;
-    const wantYaw = atHome && !isActive ? seat.yaw : Math.atan2(look[0] - g.position.x, look[2] - g.position.z);
-    let dy = wantYaw - g.rotation.y;
-    dy = Math.atan2(Math.sin(dy), Math.cos(dy));
-    g.rotation.y += dy * k;
-    material.emissiveIntensity += ((isActive ? 1.1 : 0.45) - material.emissiveIntensity) * k;
-    material.opacity = (isActive ? 0.62 : 0.42) + Math.sin(clock.elapsedTime * 1.3 + scale * 7) * 0.05;
-  });
-
-  return (
-    <group ref={group} position={seat.pos} rotation={[0, seat.yaw, 0]} scale={scale}>
-      <mesh geometry={shape.torso} material={material} />
-      <mesh geometry={shape.head} material={material} position={[0, 1.655, 0.01]} />
-      <group ref={legL} position={[-0.085, 0.86, 0]}>
-        <mesh geometry={shape.limb} material={material} position={[0, -0.42, 0]} />
-      </group>
-      <group ref={legR} position={[0.085, 0.86, 0]}>
-        <mesh geometry={shape.limb} material={material} position={[0, -0.42, 0]} />
-      </group>
-      <group ref={armL} position={[-0.215, 1.36, 0]} rotation={[0, 0, 0.08]}>
-        <mesh geometry={shape.arm} material={material} position={[0, -0.3, 0]} />
-      </group>
-      <group ref={armR} position={[0.215, 1.36, 0]} rotation={[0, 0, -0.08]}>
-        <mesh geometry={shape.arm} material={material} position={[0, -0.3, 0]} />
-      </group>
-    </group>
-  );
-}
-
 // ---------------------------------------------------------------- props --
 /** Props that appear once a PLACE_LETTER / OPEN_DRAWER event has played. */
 function EventProps({ memory }: { memory: MemoryPlayback }) {
@@ -344,7 +232,6 @@ function MemoryDirector({ memory, anchor, fragmentPos, aimedRef }: { memory: Mem
   const waited = useRef(0);
   const ended = useRef(false);
   const lookTarget = useRef(new THREE.Vector3(...MEMORY_TARGETS[anchor.lookAt]));
-  const offset = useRef({ yaw: 0, pitch: 0 });
   const tmp = useMemo(() => ({ m: new THREE.Matrix4(), q: new THREE.Quaternion(), e: new THREE.Euler(0, 0, 0, "YXZ"), up: new THREE.Vector3(0, 1, 0), v: new THREE.Vector3(), f: new THREE.Vector3() }), []);
 
   useEffect(() => {
@@ -390,24 +277,13 @@ function MemoryDirector({ memory, anchor, fragmentPos, aimedRef }: { memory: Mem
         : tmp.v.set(...MEMORY_TARGETS[ev?.cameraTargetId ?? anchor.lookAt]);
     lookTarget.current.lerp(want, 1 - Math.exp(-1.6 * delta));
 
-    // Look around with the VISIBLE cursor (no pointer lock inside memories):
-    // the gaze leans toward wherever the cursor is on screen.
+    // No look-around inside memories: the camera keeps the object's own gaze.
+    // The cursor stays visible so the glowing fragment can be clicked.
     const exploring = phase === "MEMORY_EXPLORE";
-    const yawLimit = exploring ? 0.75 : 0.45;
-    const pitchLimit = exploring ? 0.45 : 0.28;
-    const interactive = phase === "MEMORY_OBSERVE" || exploring;
-    const sens = Math.min(1.6, state.settings.mouseSensitivity);
-    const wantYaw = interactive ? -pointer.x * yawLimit * sens : 0;
-    const wantPitch = interactive ? pointer.y * pitchLimit * sens * (state.settings.invertY ? -1 : 1) : 0;
-    const ease = 1 - Math.exp(-3 * delta);
-    offset.current.yaw += (wantYaw - offset.current.yaw) * ease;
-    offset.current.pitch += (wantPitch - offset.current.pitch) * ease;
     camera.position.set(...anchor.position);
     tmp.m.lookAt(camera.position, lookTarget.current, tmp.up);
     tmp.q.setFromRotationMatrix(tmp.m);
     tmp.e.setFromQuaternion(tmp.q, "YXZ");
-    tmp.e.y += offset.current.yaw;
-    tmp.e.x = Math.max(-1.3, Math.min(1.3, tmp.e.x + offset.current.pitch));
     camera.quaternion.setFromEuler(tmp.e);
     if (camera.fov !== state.settings.fov) {
       camera.fov = state.settings.fov;
@@ -455,7 +331,6 @@ function WarmLights({ memory, quality }: { memory: MemoryPlayback; quality: Qual
 }
 
 export function MemoryScene({ memory, quality, aimedRef }: { memory: MemoryPlayback; quality: QualityPreset; aimedRef: React.RefObject<boolean> }) {
-  const shape = useActorShape();
   const phase = useGameStore((s) => s.phase);
   const exploreTargetId = useGameStore((s) => s.memory?.exploreEvent?.cameraTargetId ?? null);
   const hasExploreEvent = useGameStore((s) => Boolean(s.memory?.exploreEvent));
@@ -475,7 +350,7 @@ export function MemoryScene({ memory, quality, aimedRef }: { memory: MemoryPlayb
       <WarmLights memory={memory} quality={quality} />
       <MemorySet />
       {memory.story.actors.map((id) => (
-        <MemoryActor key={id} id={id} shape={shape} scale={scales[id]} />
+        <MemoryActor key={id} id={id} scale={scales[id]} />
       ))}
       <EventProps memory={memory} />
       {phase === "MEMORY_EXPLORE" && fragmentPos ? <Fragment position={fragmentPos} aimedRef={aimedRef} /> : null}

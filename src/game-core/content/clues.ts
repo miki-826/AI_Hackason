@@ -80,10 +80,10 @@ export const CLUE_DEFINITIONS: ClueDefinition[] = [
     furnitureType: "mirror",
     required: false,
     factId: "fact-self",
-    title: "鏡の中の設計者",
-    content: "鏡の記憶に映っていたのは、図面を広げてこの部屋を設計する、少し年を重ねた自分自身だった。",
+    title: "鏡の中の住人",
+    content: "鏡の記憶に映っていたのは、誰もいない食卓の前で、同じ言葉を繰り返す自分自身の姿だった。窓も扉も、いつの間にか消えていた。",
     relatedClueIds: ["clue-desk"],
-    decodedContent: "密室を作ったのは自分だった。忘れるためではなく、いつか思い出すために。",
+    decodedContent: "この部屋は、自分の心残りが形になったものだった。言えなかった言葉が、ここに自分を留めている。",
     unlocks: [],
   },
 ];

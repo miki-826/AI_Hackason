@@ -8,11 +8,20 @@ import { useGameStore } from "@/stores/gameStore";
 import { MemoryScene } from "@/components/memory/MemoryScene";
 import { lookInput } from "./inputState";
 import { PlayerRig } from "./PlayerRig";
+import { PerformanceMonitor } from "@react-three/drei";
 import { PostFX, SceneEnvironment } from "./RenderQuality";
 import { RoomScene } from "./RoomScene";
 
 /** Pointer lock (hidden cursor) only while walking; every other phase keeps the cursor visible. */
 const LOCKABLE = new Set(["EXPLORING", "ESCAPE"]);
+
+function downgradeQuality() {
+  const s = useGameStore.getState();
+  const next = s.settings.quality === "high" ? "standard" : s.settings.quality === "standard" ? "low" : null;
+  if (!next) return;
+  s.updateSettings({ quality: next });
+  s.showToast(next === "standard" ? "動作が重いため、画質を「標準」に下げました。" : "動作が重いため、画質を「低」に下げました。");
+}
 
 /** WebGL canvas: the present room, or the memory set while a memory plays. */
 export default function GameCanvas() {
@@ -76,7 +85,7 @@ export default function GameCanvas() {
   }, []);
 
   const showMemory = memorySceneActive && memory;
-  const dpr: [number, number] = quality === "high" ? [1, 2] : quality === "standard" ? [1, 1.5] : [0.75, 1];
+  const dpr: [number, number] = quality === "high" ? [1, 1.5] : quality === "standard" ? [0.85, 1.1] : [0.6, 0.85];
 
   return (
     <div
@@ -85,7 +94,7 @@ export default function GameCanvas() {
       style={{ filter: showMemory ? "sepia(0.22) saturate(1.12)" : "none" }}
     >
       <Canvas
-        shadows={quality === "low" ? false : "soft"}
+        shadows={quality === "low" ? false : quality === "high" ? "soft" : true}
         flat={quality !== "low"}
         resize={{ scroll: false, debounce: { scroll: 0, resize: 0 } }}
         dpr={dpr}
@@ -93,6 +102,8 @@ export default function GameCanvas() {
         camera={{ fov: 70, near: 0.05, far: 60, position: PLAYER.spawn }}
         aria-label="3D の部屋"
       >
+        {/* drop one quality step automatically when the frame rate stays low */}
+        <PerformanceMonitor flipflops={2} onDecline={downgradeQuality} />
         <SceneEnvironment intensity={showMemory ? 0.35 : 0.18} />
         {showMemory ? (
           <MemoryScene memory={memory} quality={quality} aimedRef={aimed} />

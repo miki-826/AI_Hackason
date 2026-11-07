@@ -7,6 +7,7 @@ import { useGameStore } from "@/stores/gameStore";
 import { ControlsHelp } from "./ControlsHelp";
 import { ManualSlides } from "./ManualSlides";
 import { SettingsDialog } from "./SettingsDialog";
+import { VoiceToggle } from "./VoiceToggle";
 
 /** SC-01: title, start, continue, controls, settings. */
 export function TitleMenu() {
@@ -77,6 +78,7 @@ export function TitleMenu() {
           </button>
         </div>
       </div>
+      <VoiceToggle className="absolute right-5 top-5" />
       <p className="absolute bottom-5 text-xs text-mist">PC ブラウザ（Chrome / Edge）推奨・マウスとキーボードで遊びます</p>
       {controlsOpen ? <ControlsHelp /> : null}
       {settingsOpen ? <SettingsDialog /> : null}

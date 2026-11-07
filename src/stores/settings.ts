@@ -26,13 +26,13 @@ export const DEFAULT_SETTINGS: Settings = {
   ambienceVolume: 0.5,
   bgmVolume: 0.55,
   voiceVolume: 0.9,
-  voiceEnabled: true,
-  quality: "high",
+  voiceEnabled: false,
+  quality: "standard",
   subtitles: true,
   invertY: false,
 };
 
-const KEY = "ts:settings:v2";
+const KEY = "ts:settings:v4";
 
 const clamp = (v: unknown, min: number, max: number, d: number) =>
   typeof v === "number" && Number.isFinite(v) ? Math.min(max, Math.max(min, v)) : d;

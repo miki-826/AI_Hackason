@@ -4,10 +4,11 @@ import { useShallow } from "zustand/react/shallow";
 import { FURNITURE_DEFINITIONS, furnitureTypeFromId } from "@/game-core/definitions/furniture";
 import { useGameStore } from "@/stores/gameStore";
 import { Back, Sparkle } from "@/components/ui/icons";
+import { VoiceToggle } from "@/components/ui/VoiceToggle";
 
 /** SC-05 / SC-06: subtitles, timeline, explore hint, clue card, review. */
 export function MemoryOverlay() {
-  const { phase, memory, subtitles, leaveMemory, collectFragment, acknowledgeClue, replayMemory, returnFromMemory } = useGameStore(
+  const { phase, memory, subtitles, leaveMemory, collectFragment, acknowledgeClue, replayMemory, returnFromMemory, skipMemory } = useGameStore(
     useShallow((s) => ({
       phase: s.phase,
       memory: s.memory,
@@ -17,6 +18,7 @@ export function MemoryOverlay() {
       acknowledgeClue: s.acknowledgeClue,
       replayMemory: s.replayMemory,
       returnFromMemory: s.returnFromMemory,
+      skipMemory: s.skipMemory,
     })),
   );
   if (!memory) return null;
@@ -36,6 +38,18 @@ export function MemoryOverlay() {
           <Back size={18} /> 戻る
         </button>
       ) : null}
+      <div className="absolute right-5 top-5 flex items-center gap-3">
+        {phase === "MEMORY_TRANSITION_IN" || phase === "MEMORY_OBSERVE" || phase === "MEMORY_EXPLORE" ? (
+          <button
+            type="button"
+            onClick={() => void skipMemory()}
+            className="pointer-events-auto min-h-11 border border-brass/60 bg-ink/70 px-4 text-sm text-parchment hover:border-brass"
+          >
+            記憶をスキップ
+          </button>
+        ) : null}
+        <VoiceToggle />
+      </div>
       <div className="absolute left-1/2 top-5 -translate-x-1/2 bg-ink/55 px-5 py-1.5 text-center">
         <p className="font-mincho text-xl text-brass-bright drop-shadow">{memory.story.title}</p>
         <p className="mt-0.5 text-xs text-parchment/80">{type ? FURNITURE_DEFINITIONS[type].name : ""}の記憶</p>

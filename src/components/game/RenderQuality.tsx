@@ -19,26 +19,28 @@ export function SceneEnvironment({ intensity }: { intensity: number }) {
     const pmrem = new THREE.PMREMGenerator(gl);
     const env = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
     scene.environment = env;
-    scene.environmentIntensity = intensity;
     return () => {
       scene.environment = null;
       env.dispose();
       pmrem.dispose();
     };
-  }, [gl, scene, intensity]);
+  }, [gl, scene]);
+  useEffect(() => {
+    scene.environmentIntensity = intensity;
+  }, [scene, intensity]);
   return null;
 }
 
 /**
- * Cinematic post-processing. "high": ambient occlusion + bloom + SMAA;
- * "standard": bloom + SMAA; "low": none (renderer tone mapping instead).
+ * Cinematic post-processing. "high": ambient occlusion + bloom + grain + SMAA;
+ * "standard": bloom + vignette at 75% resolution; "low": none.
  */
 export function PostFX({ quality, warm }: { quality: QualityPreset; warm: boolean }) {
   if (quality === "low") return null;
   if (quality === "high") {
     return (
       <EffectComposer multisampling={0}>
-        <N8AO aoRadius={0.55} distanceFalloff={0.9} intensity={2.4} halfRes quality="medium" color="#0b0806" />
+        <N8AO aoRadius={0.55} distanceFalloff={0.9} intensity={2.4} halfRes quality="performance" color="#0b0806" />
         <Bloom intensity={warm ? 0.9 : 0.55} luminanceThreshold={0.72} luminanceSmoothing={0.25} mipmapBlur />
         <Vignette offset={0.22} darkness={warm ? 0.55 : 0.78} />
         <Noise premultiply blendFunction={BlendFunction.SOFT_LIGHT} opacity={0.35} />
@@ -48,11 +50,10 @@ export function PostFX({ quality, warm }: { quality: QualityPreset; warm: boolea
     );
   }
   return (
-    <EffectComposer multisampling={0}>
-      <Bloom intensity={warm ? 0.8 : 0.5} luminanceThreshold={0.75} luminanceSmoothing={0.25} mipmapBlur />
+    <EffectComposer multisampling={0} resolutionScale={0.75}>
+      <Bloom intensity={warm ? 0.8 : 0.5} luminanceThreshold={0.78} luminanceSmoothing={0.25} mipmapBlur levels={5} />
       <Vignette offset={0.22} darkness={warm ? 0.55 : 0.75} />
       <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
-      <SMAA />
     </EffectComposer>
   );
 }

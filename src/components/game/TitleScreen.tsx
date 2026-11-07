@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useEffect } from "react";
 import { TitleMenu } from "@/components/ui/TitleMenu";
 import { audio } from "@/lib/audio/audioEngine";
+import { narrator } from "@/lib/audio/narrator";
 import { useGameStore } from "@/stores/gameStore";
 import titleBg from "../../../public/images/title-bg.jpg";
 
@@ -11,6 +12,12 @@ export function TitleScreen() {
   // BGM starts on the first interaction (browser autoplay policy) and keeps
   // playing into the game.
   useEffect(() => {
+    const voice = () => {
+      const { settings } = useGameStore.getState();
+      narrator.configure({ enabled: settings.voiceEnabled, volume: settings.voiceVolume * settings.masterVolume });
+    };
+    voice();
+    useGameStore.getState().closeManual();
     const start = () => {
       const { settings } = useGameStore.getState();
       audio.unlock();
@@ -27,6 +34,7 @@ export function TitleScreen() {
     window.addEventListener("keydown", start, { once: true });
     const unsub = useGameStore.subscribe((s, prev) => {
       if (s.settings !== prev.settings) {
+        voice();
         audio.setVolumes({
           master: s.settings.masterVolume,
           sfx: s.settings.sfxVolume,

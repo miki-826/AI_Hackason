@@ -14,6 +14,10 @@ export function useGameInput() {
       keysDown.add(e.code);
       if (isTyping(e.target)) return;
       const s = useGameStore.getState();
+      if (e.code === "KeyV" && !e.repeat) {
+        s.updateSettings({ voiceEnabled: !s.settings.voiceEnabled });
+        return;
+      }
       if (s.manualOpen) return; // the manual handles its own keys
       if (e.code === "KeyE" && !e.repeat && !s.journalOpen && !s.settingsOpen) {
         if (s.phase === "MEMORY_EXPLORE") void s.collectFragment();

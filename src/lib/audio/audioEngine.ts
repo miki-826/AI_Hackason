@@ -25,6 +25,7 @@ let bgmGainNode: GainNode | null = null;
 let bgmMode: BgmMode = "off";
 let ducked = false;
 let userBgm = 0.55;
+let muted = false;
 
 function ensure(): { ctx: AudioContext; bus: Bus } | null {
   if (typeof window === "undefined") return null;
@@ -41,7 +42,7 @@ function ensure(): { ctx: AudioContext; bus: Bus } | null {
     bus = { master, sfx: mk(), amb: mk(), bgm: mk(), voice: mk() };
     master.connect(ctx.destination);
   }
-  if (ctx.state === "suspended") void ctx.resume();
+  if (ctx.state === "suspended" && !muted) void ctx.resume();
   return bus ? { ctx, bus } : null;
 }
 
@@ -83,7 +84,8 @@ export const audio = {
     bus.bgm.gain.setTargetAtTime(userBgm, t, 0.05);
     bus.voice.gain.setTargetAtTime(v.voice, t, 0.05);
   },
-  setMuted(muted: boolean) {
+  setMuted(next: boolean) {
+    muted = next;
     if (!ctx) return;
     if (muted) {
       void ctx.suspend();
@@ -114,7 +116,7 @@ export const audio = {
       setTimeout(() => {
         if (bgmMode === "off") el.pause();
       }, 1500);
-    } else if (bgmEl.paused) {
+    } else if (bgmEl.paused && !muted) {
       void bgmEl.play().catch(() => undefined);
     }
   },

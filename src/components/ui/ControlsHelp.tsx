@@ -9,6 +9,7 @@ const CONTROL_ROWS: ReadonlyArray<{ keyLabel: string; action: string; detail: st
   { keyLabel: "E", action: "調べる", detail: "照準を合わせた家具や装置に触れます" },
   { keyLabel: "J", action: "手掛かり帳", detail: "集めた記憶の断片やヒントを確認・解読します" },
   { keyLabel: "ESC", action: "一時停止 / 閉じる", detail: "視点固定を解除し、開いている画面を閉じます" },
+  { keyLabel: "V", action: "読み上げ オン / オフ", detail: "字幕や語りの音声読み上げを切り替えます" },
   { keyLabel: "クリック", action: "視点操作開始", detail: "画面をクリックするとマウスによる視点移動が始まります" },
 ];
 

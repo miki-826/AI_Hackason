@@ -8,6 +8,7 @@ import { ControlsHelp } from "@/components/ui/ControlsHelp";
 import { Gear, Satchel } from "@/components/ui/icons";
 import { SettingsDialog } from "@/components/ui/SettingsDialog";
 import { Toast } from "@/components/ui/Toast";
+import { VoiceToggle } from "@/components/ui/VoiceToggle";
 import { ClueJournal } from "./ClueJournal";
 import { EndingScreen } from "./EndingScreen";
 import { InspectPanel } from "./InspectPanel";
@@ -98,6 +99,7 @@ function ExplorationHud() {
         <p className="font-mincho text-base text-parchment drop-shadow">{mission.main}</p>
         {mission.sub ? <p className="mt-1 text-mist">{mission.sub}</p> : null}
       </div>
+      <VoiceToggle className="absolute right-[4.5rem] top-5" />
       <button
         type="button"
         aria-label="一時停止メニュー"

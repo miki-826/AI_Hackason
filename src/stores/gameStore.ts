@@ -102,6 +102,8 @@ export type GameActions = {
   collectFragment(): Promise<void>;
   acknowledgeClue(): void;
   memoryTimelineEnd(): void;
+  /** jump to the review; the memory's clue is still recorded */
+  skipMemory(): Promise<void>;
   returnFromMemory(): Promise<void>;
   leaveMemory(): void;
 
@@ -491,6 +493,38 @@ export const useGameStore = create<GameStore>()((set, get) => {
 
     memoryTimelineEnd() {
       go("TIMELINE_END");
+    },
+
+    async skipMemory() {
+      const { memory, session } = get();
+      if (!memory || !session || !go("SKIP")) return;
+      const events = memory.story.events;
+      const clueEvent = events.find((e) => e.clueId);
+      const needClue =
+        clueEvent?.clueId && !memory.foundClue && !session.progress.collectedClueIds.includes(clueEvent.clueId);
+      set({
+        memory: {
+          ...memory,
+          eventIndex: events.length - 1,
+          observedEventIds: events.map((e) => e.id),
+          exploreEvent: null,
+          resolvedClueEventIds: events.filter((e) => e.clueId).map((e) => e.id),
+        },
+      });
+      try {
+        const res = await gateway.completeMemory(session.sessionId, memory.furnitureId, {
+          observedEventIds: events.map((e) => e.id),
+          foundClueIds: needClue && clueEvent?.clueId ? [clueEvent.clueId] : [],
+        });
+        const clue = clueEvent?.clueId ? (res.session.clues.find((c) => c.id === clueEvent.clueId) ?? null) : null;
+        if (res.session.progress.puzzleUnlocked && !session.progress.puzzleUnlocked) pendingUnlockToast = true;
+        set((s) => ({
+          session: res.session,
+          memory: s.memory ? { ...s.memory, foundClue: s.memory.foundClue ?? clue } : null,
+        }));
+      } catch (err) {
+        get().showToast(messageOf(err));
+      }
     },
 
     async returnFromMemory() {

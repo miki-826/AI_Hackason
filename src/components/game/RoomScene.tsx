@@ -161,7 +161,7 @@ function PendantLamp({ quality }: { quality: QualityPreset }) {
         angle={1.15}
         penumbra={1}
         castShadow={shadows}
-        shadow-mapSize={quality === "high" ? [2048, 2048] : [1024, 1024]}
+        shadow-mapSize={quality === "high" ? [1024, 1024] : [512, 512]}
         shadow-bias={-0.0004}
         shadow-normalBias={0.02}
         shadow-radius={6}
@@ -342,7 +342,7 @@ export function RoomScene({
           </>
         ) : null}
       </group>
-      {quality !== "low" ? <Dust count={quality === "high" ? 900 : 400} /> : null}
+      {quality !== "low" ? <Dust count={quality === "high" ? 500 : 200} /> : null}
     </>
   );
 }

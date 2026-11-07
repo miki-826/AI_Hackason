@@ -11,7 +11,7 @@ import { audio } from "./audioEngine";
  */
 type Line = { text: string; sessionId: string | null };
 
-let enabled = true;
+let enabled = false; // off by default; the 読み上げ toggle turns it on
 let volume = 0.9;
 let serverTts = false;
 let serverFailures = 0;
@@ -82,7 +82,11 @@ async function serverSpeak(line: Line, gen: number): Promise<boolean> {
       credentials: "same-origin",
       body: JSON.stringify({ text: line.text }),
     });
-    if (!res.ok) throw new Error(String(res.status));
+    if (!res.ok) {
+      // 4xx = this line is not on the server allowlist / rate limited: use the browser voice for it only
+      if (res.status < 500) return false;
+      throw new Error(String(res.status));
+    }
     const buf = await ctx.decodeAudioData(await res.arrayBuffer());
     if (gen !== generation) return true;
     await new Promise<void>((resolve) => {
@@ -90,6 +94,7 @@ async function serverSpeak(line: Line, gen: number): Promise<boolean> {
       src.buffer = buf;
       src.connect(out);
       src.onended = () => resolve();
+      setTimeout(resolve, buf.duration * 1000 + 1500); // watchdog if the context stalls
       currentSource = src;
       src.start();
     });
@@ -107,14 +112,21 @@ async function pump() {
   if (speaking) return;
   speaking = true;
   audio.duck(true);
-  while (queue.length > 0) {
-    const line = queue.shift()!;
-    const gen = generation;
-    const ok = serverTts ? await serverSpeak(line, gen) : false;
-    if (!ok && gen === generation) await browserSpeak(line.text, gen);
+  try {
+    while (queue.length > 0) {
+      const line = queue.shift()!;
+      const gen = generation;
+      try {
+        const ok = serverTts ? await serverSpeak(line, gen) : false;
+        if (!ok && gen === generation) await browserSpeak(line.text, gen);
+      } catch {
+        /* skip a line that cannot be spoken */
+      }
+    }
+  } finally {
+    speaking = false;
+    audio.duck(false);
   }
-  speaking = false;
-  audio.duck(false);
 }
 
 export const narrator = {

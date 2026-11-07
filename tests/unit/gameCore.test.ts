@@ -66,6 +66,12 @@ describe("state machine", () => {
     expect(transition("TITLE", "INVESTIGATE")).toBeNull();
     expect(transition("INSPECTING", "BACK")).toBe("EXPLORING");
     expect(transition("MEMORY_REVIEW", "RETURN")).toBe("MEMORY_TRANSITION_OUT");
+    // memories can be skipped from any playing state, never from the room
+    for (const p of ["MEMORY_TRANSITION_IN", "MEMORY_OBSERVE", "MEMORY_EXPLORE", "MEMORY_CLUE"] as const) {
+      expect(transition(p, "SKIP")).toBe("MEMORY_REVIEW");
+    }
+    expect(transition("EXPLORING", "SKIP")).toBeNull();
+    expect(transition("MEMORY_REVIEW", "SKIP")).toBeNull();
   });
 });
 

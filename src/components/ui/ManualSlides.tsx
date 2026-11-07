@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { MANUAL_SLIDES } from "@/game-core/definitions/manual";
 import { narrator } from "@/lib/audio/narrator";
 import { useGameStore } from "@/stores/gameStore";
+import { VoiceToggle } from "./VoiceToggle";
 
 /**
  * 遊び方 — illustrated slide manual (images generated with ChatGPT image
@@ -22,11 +23,14 @@ export function ManualSlides({ onClose, startLabel = "はじめる" }: { onClose
   const next = useCallback(() => (last ? close() : setIndex((i) => i + 1)), [last, close]);
   const prev = useCallback(() => setIndex((i) => Math.max(0, i - 1)), []);
 
-  // read each slide aloud
+  // read each slide aloud (again when the voice is switched back on)
+  const voiceOn = useGameStore((s) => s.settings.voiceEnabled);
   useEffect(() => {
-    const sessionId = useGameStore.getState().session?.sessionId ?? null;
-    narrator.speak([slide.title, ...slide.body], { interrupt: true, sessionId });
-  }, [slide]);
+    if (!voiceOn) return;
+    const st = useGameStore.getState();
+    narrator.configure({ enabled: true, volume: st.settings.voiceVolume * st.settings.masterVolume });
+    narrator.speak([slide.title, ...slide.body], { interrupt: true, sessionId: st.session?.sessionId ?? null });
+  }, [slide, voiceOn]);
 
   useEffect(() => () => narrator.cancel(), []);
 
@@ -73,9 +77,12 @@ export function ManualSlides({ onClose, startLabel = "はじめる" }: { onClose
 
       <header className="absolute inset-x-0 top-0 flex items-center justify-between px-6 py-5">
         <p className="font-mincho text-lg tracking-widest text-brass-bright">遊び方</p>
-        <button ref={closeRef} type="button" onClick={close} className="min-h-11 border border-brass/50 bg-ink/60 px-5 text-sm text-parchment hover:border-brass">
-          スキップ
-        </button>
+        <div className="flex items-center gap-3">
+          <VoiceToggle />
+          <button ref={closeRef} type="button" onClick={close} className="min-h-11 border border-brass/50 bg-ink/60 px-5 text-sm text-parchment hover:border-brass">
+            スキップ
+          </button>
+        </div>
       </header>
 
       <section className="absolute inset-x-0 bottom-0 px-6 pb-8 sm:px-12 sm:pb-12" aria-live="polite">

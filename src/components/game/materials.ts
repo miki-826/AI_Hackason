@@ -36,14 +36,13 @@ export function photoTexture(url: string, repeatX = 1, repeatY = 1, color = true
       base = loader ? loader.load(url) : new THREE.Texture();
       base.wrapS = THREE.RepeatWrapping;
       base.wrapT = THREE.RepeatWrapping;
-      base.anisotropy = 8;
+      base.anisotropy = 4;
       photoBase.set(url, base);
     }
     const t = base.clone();
     t.source = base.source; // share the image, independent repeat
     t.colorSpace = color ? THREE.SRGBColorSpace : THREE.NoColorSpace;
     t.repeat.set(repeatX, repeatY);
-    t.needsUpdate = true;
     return t;
   });
 }
