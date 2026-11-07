@@ -140,11 +140,12 @@ export const ClockModel = memo(function ClockModel({ variant = "present" }: Mode
         <cylinderGeometry args={[0.012, 0.012, 0.006, 16]} />
       </mesh>
       <M geo={rbox(0.62, 0.05, 0.42, 0.012)} mat={trim} p={[0, 2.03, 0]} />
-      <mesh position={[0, 2.06, 0.0]} rotation={[0, 0, 0]} material={wood} castShadow>
-        <cylinderGeometry args={[0.26, 0.26, 0.38, 32, 1, false, -Math.PI / 2, Math.PI]} />
+      {/* low arched pediment: half-round running front-to-back on the cornice */}
+      <mesh position={[0, 2.055, 0]} rotation={[Math.PI / 2, 0, 0]} scale={[1, 1, 0.42]} material={wood} castShadow>
+        <cylinderGeometry args={[0.27, 0.27, 0.38, 32, 1, false, Math.PI / 2, Math.PI]} />
       </mesh>
       {[-0.27, 0, 0.27].map((x) => (
-        <M key={x} geo={finial(0.12, 0.03)} mat={brass} p={[x, x === 0 ? 2.38 : 2.12, 0.05]} shadow={false} />
+        <M key={x} geo={finial(0.12, 0.03)} mat={brass} p={[x, x === 0 ? 2.235 : 2.115, 0.12]} shadow={false} />
       ))}
     </group>
   );
