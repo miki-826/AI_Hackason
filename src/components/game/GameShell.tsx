@@ -12,6 +12,7 @@ import { audio } from "@/lib/audio/audioEngine";
 import { narrator } from "@/lib/audio/narrator";
 import { MEMORY_PHASES } from "@/game-core/state/transitions";
 import { useGameStore } from "@/stores/gameStore";
+import { useTextScale } from "@/hooks/useTextScale";
 import { MemoryVeil } from "./MemoryVeil";
 
 // Three.js never runs during SSR (spec 12.2).
@@ -46,6 +47,7 @@ export function GameShell() {
   const closeManual = useGameStore((s) => s.closeManual);
   useGameInput();
   useNarration();
+  useTextScale();
 
   useEffect(() => {
     const s = useGameStore.getState();

@@ -323,10 +323,6 @@ function ExitDoor() {
       <mesh position={[0, 2.4, 0.04]} material={frame}>
         <boxGeometry args={[1.3, 0.1, 0.08]} />
       </mesh>
-      {/* opened door leaf swung into the room */}
-      <mesh position={[-0.55 + Math.cos(1.1) * 0.5, 1.15, Math.sin(1.1) * 0.5]} rotation={[0, -1.1, 0]} material={woodMaterial(PALETTE.walnut)}>
-        <boxGeometry args={[1.0, 2.25, 0.05]} />
-      </mesh>
       {/* light shaft */}
       <mesh position={[0, 0.02, 1.4]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[1.1, 2.8]} />

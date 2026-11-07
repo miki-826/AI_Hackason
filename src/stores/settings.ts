@@ -1,4 +1,8 @@
 export type QualityPreset = "low" | "standard" | "high";
+export type TextSize = "small" | "standard" | "large" | "xlarge";
+
+/** root font-size per text size (every UI size is rem-based, so this scales the whole UI text) */
+export const TEXT_SCALE: Record<TextSize, string> = { small: "87.5%", standard: "100%", large: "115%", xlarge: "130%" };
 
 export type Settings = {
   /** multiplier, 0.2 – 3.0 */
@@ -16,6 +20,7 @@ export type Settings = {
   quality: QualityPreset;
   subtitles: boolean;
   invertY: boolean;
+  textSize: TextSize;
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -30,6 +35,7 @@ export const DEFAULT_SETTINGS: Settings = {
   quality: "standard",
   subtitles: true,
   invertY: false,
+  textSize: "standard",
 };
 
 const KEY = "ts:settings:v4";
@@ -51,6 +57,7 @@ export function sanitizeSettings(raw: Partial<Settings> | null | undefined): Set
     quality: r.quality === "low" || r.quality === "high" || r.quality === "standard" ? r.quality : DEFAULT_SETTINGS.quality,
     subtitles: typeof r.subtitles === "boolean" ? r.subtitles : DEFAULT_SETTINGS.subtitles,
     invertY: typeof r.invertY === "boolean" ? r.invertY : DEFAULT_SETTINGS.invertY,
+    textSize: r.textSize && r.textSize in TEXT_SCALE ? r.textSize : DEFAULT_SETTINGS.textSize,
   };
 }
 

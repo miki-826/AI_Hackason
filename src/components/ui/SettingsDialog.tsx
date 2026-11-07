@@ -1,5 +1,7 @@
 "use client";
 
+import type { TextSize } from "@/stores/settings";
+
 import { useShallow } from "zustand/react/shallow";
 import { useGameStore } from "@/stores/gameStore";
 import type { QualityPreset } from "@/stores/settings";
@@ -74,6 +76,13 @@ function ToggleRow({ id, label, description, checked, onChange }: ToggleRowProps
     </div>
   );
 }
+
+const TEXT_SIZE_OPTIONS: { value: TextSize; label: string; preview: string }[] = [
+  { value: "small", label: "小", preview: "0.85rem" },
+  { value: "standard", label: "標準", preview: "1rem" },
+  { value: "large", label: "大", preview: "1.15rem" },
+  { value: "xlarge", label: "特大", preview: "1.3rem" },
+];
 
 export function SettingsDialog() {
   const { settings, updateSettings, closeSettings } = useGameStore(
@@ -218,6 +227,35 @@ export function SettingsDialog() {
                     />
                     <span className="font-mincho text-sm font-semibold">{opt.label}</span>
                     <span className="mt-0.5 text-xs text-mist">{opt.hint}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
+
+          <fieldset className="border-t border-brass-dim/30 pt-4">
+            <legend className="font-mincho text-sm tracking-widest text-brass">文字の大きさ</legend>
+            <div className="mt-3 grid grid-cols-4 gap-2">
+              {TEXT_SIZE_OPTIONS.map((opt) => {
+                const selected = settings.textSize === opt.value;
+                return (
+                  <label
+                    key={opt.value}
+                    className={`flex min-h-11 cursor-pointer items-center justify-center border px-2 py-2 text-center transition-colors ${
+                      selected ? "border-brass bg-walnut text-brass-bright" : "border-brass-dim/40 bg-ink/70 text-parchment hover:border-brass/70"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="text-size"
+                      value={opt.value}
+                      checked={selected}
+                      onChange={() => updateSettings({ textSize: opt.value })}
+                      className="sr-only"
+                    />
+                    <span className="font-mincho font-semibold" style={{ fontSize: opt.preview }}>
+                      {opt.label}
+                    </span>
                   </label>
                 );
               })}

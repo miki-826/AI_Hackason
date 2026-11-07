@@ -6,9 +6,11 @@ import { TitleMenu } from "@/components/ui/TitleMenu";
 import { audio } from "@/lib/audio/audioEngine";
 import { narrator } from "@/lib/audio/narrator";
 import { useGameStore } from "@/stores/gameStore";
+import { useTextScale } from "@/hooks/useTextScale";
 import titleBg from "../../../public/images/title-bg.jpg";
 
 export function TitleScreen() {
+  useTextScale();
   // BGM starts on the first interaction (browser autoplay policy) and keeps
   // playing into the game.
   useEffect(() => {
