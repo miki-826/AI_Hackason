@@ -8,7 +8,13 @@ import { useGameStore } from "@/stores/gameStore";
 export function EndingScreen() {
   const router = useRouter();
   const { ending, goToTitle, startNewGame } = useGameStore(useShallow((s) => ({ ending: s.ending, goToTitle: s.goToTitle, startNewGame: s.startNewGame })));
-  if (!ending) return null;
+  if (!ending) {
+    return (
+      <div className="pointer-events-auto fixed inset-0 z-40 grid place-items-center bg-[#f4ead6] motion-safe:animate-[fadein_1.2s_ease-out]" role="status">
+        <p className="font-mincho text-xl text-walnut">扉の向こうへ…</p>
+      </div>
+    );
+  }
   return (
     <div className="pointer-events-auto fixed inset-0 z-40 overflow-y-auto bg-gradient-to-b from-[#f4ead6] via-[#d9c7a3] to-ink text-ink motion-safe:animate-[fadein_2.4s_ease-out]">
       <article className="mx-auto max-w-[34em] px-6 py-20 font-mincho leading-loose">

@@ -27,7 +27,7 @@ export function MemoryOverlay() {
 
   return (
     <div className="fixed inset-0 z-20">
-      {phase !== "MEMORY_TRANSITION_OUT" ? (
+      {phase !== "MEMORY_TRANSITION_OUT" && phase !== "MEMORY_CLUE" ? (
         <button
           type="button"
           className="pointer-events-auto absolute left-5 top-5 flex min-h-11 items-center gap-2 border border-brass/50 bg-ink/60 px-4 text-sm text-parchment hover:border-brass"
@@ -81,12 +81,20 @@ export function MemoryOverlay() {
           <section role="dialog" aria-modal="true" aria-labelledby="clue-title" className="brass-panel w-[min(92vw,30rem)] p-7 text-center">
             <p className="text-sm text-ember">手掛かりを見つけた</p>
             <h2 id="clue-title" className="mt-2 font-mincho text-2xl text-brass-bright">
-              {memory.foundClue?.title ?? "記憶を書き留めています…"}
+              {memory.foundClue?.title ?? (memory.clueFailed ? "記録できなかった" : "記憶を書き留めています…")}
             </h2>
-            <p className="mt-4 text-left leading-relaxed">{memory.foundClue?.content ?? ""}</p>
-            <button type="button" autoFocus className="brass-button mt-6 w-full py-3" onClick={acknowledgeClue}>
-              手掛かり帳に記録する
-            </button>
+            <p className="mt-4 text-left leading-relaxed">
+              {memory.foundClue?.content ?? (memory.clueFailed ? "通信に失敗したため、手掛かりを保存できなかった。もう一度記録する。" : "")}
+            </p>
+            {memory.clueFailed && !memory.foundClue ? (
+              <button type="button" autoFocus className="brass-button mt-6 w-full py-3" onClick={() => void collectFragment()}>
+                もう一度記録する
+              </button>
+            ) : (
+              <button type="button" autoFocus className="brass-button mt-6 w-full py-3" onClick={acknowledgeClue} disabled={!memory.foundClue}>
+                手掛かり帳に記録する
+              </button>
+            )}
           </section>
         </div>
       ) : null}
@@ -106,7 +114,7 @@ export function MemoryOverlay() {
             <div className="mt-5 border-t border-brass/30 pt-4">
               {memory.foundClue ? (
                 <p>
-                  <span className="text-verdigris">見つけた手掛かり：</span>
+                  <span className="text-verdigris">{memory.alreadyCollected ? "手掛かり帳に記録済み：" : "見つけた手掛かり："}</span>
                   {memory.foundClue.title}
                 </p>
               ) : (

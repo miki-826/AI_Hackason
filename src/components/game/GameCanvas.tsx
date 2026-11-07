@@ -47,7 +47,7 @@ export default function GameCanvas() {
       const s = useGameStore.getState();
       s.setPointerLocked(locked);
       // ESC released the lock during gameplay -> pause (spec 2.2)
-      if (!locked && LOCKABLE.has(s.phase)) s.pause();
+      if (!locked && LOCKABLE.has(s.phase) && !s.journalOpen && !s.settingsOpen && !s.controlsOpen) s.pause();
     };
     el.addEventListener("mousedown", onDown);
     document.addEventListener("mousemove", onMove);

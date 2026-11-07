@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import { transition, type GameEvent } from "@/game-core/state/transitions";
+import { PAUSABLE_PHASES, transition, type GameEvent } from "@/game-core/state/transitions";
 import type {
   Checkpoint,
   EndingContent,
@@ -38,6 +38,11 @@ export type MemoryPlayback = {
   foundClue: PublicClue | null;
   /** clue event ids already resolved in this playback (no double grants) */
   resolvedClueEventIds: string[];
+  /** this furniture's clue was collected in an earlier playback */
+  alreadyCollected: boolean;
+  /** saving the clue failed; the CLUE card offers a retry */
+  clueFailed: boolean;
+  retryEvent: MemoryEvent | null;
 };
 
 export type PuzzleState = {
@@ -183,7 +188,15 @@ async function switchToDemoIfAllowed(err: unknown): Promise<boolean> {
   return false;
 }
 
+let pendingUnlockToast = false;
+
 export const useGameStore = create<GameStore>()((set, get) => {
+  const flushUnlockToast = () => {
+    if (!pendingUnlockToast) return;
+    pendingUnlockToast = false;
+    setTimeout(() => get().showToast("東の壁で、何かが動いた音がする。"), 1200);
+  };
+
   /** Apply a phase machine event; ignored if not allowed. */
   const go = (event: GameEvent): boolean => {
     const next = transition(get().phase, event);
@@ -221,6 +234,8 @@ export const useGameStore = create<GameStore>()((set, get) => {
       }
       if (!session) throw new GatewayError("再開できるセッションが見つかりません。", 404, "NOT_FOUND", false);
       setStep("session", "done");
+      // later retries must resume this session, never start a new one
+      lastBoot = () => gateway.currentSession();
       setStep("layout", "active");
       set({ session, mode: gateway.mode });
       setStep("layout", "done");
@@ -328,8 +343,8 @@ export const useGameStore = create<GameStore>()((set, get) => {
     },
 
     interact() {
-      const { phase, focusTarget, session } = get();
-      if ((phase !== "EXPLORING" && phase !== "ESCAPE") || !focusTarget) return;
+      const { phase, focusTarget, session, journalOpen, settingsOpen } = get();
+      if ((phase !== "EXPLORING" && phase !== "ESCAPE") || !focusTarget || journalOpen || settingsOpen) return;
       if (phase === "ESCAPE") {
         if (focusTarget.kind === "exit_door" && go("ESCAPED")) void get().escapeComplete();
         return;
@@ -386,7 +401,10 @@ export const useGameStore = create<GameStore>()((set, get) => {
             eventIndex: -1,
             observedEventIds: [],
             exploreEvent: null,
-            foundClue: null,
+            foundClue: session.clues.find((c) => c.furnitureId === furnitureId) ?? null,
+            alreadyCollected: session.clues.some((c) => c.furnitureId === furnitureId),
+            clueFailed: false,
+            retryEvent: null,
             resolvedClueEventIds: [],
           },
         });
@@ -426,18 +444,31 @@ export const useGameStore = create<GameStore>()((set, get) => {
     async collectFragment() {
       const { memory, session, phase } = get();
       if (!memory || !session) return;
-      const event = memory.exploreEvent ?? memory.story.events[memory.eventIndex];
+      const event = memory.retryEvent ?? memory.exploreEvent ?? memory.story.events[memory.eventIndex];
       if (!event?.clueId) return;
       if (phase === "MEMORY_EXPLORE" && !go("CLUE_FOUND")) return;
-      set({ memory: { ...memory, exploreEvent: null, resolvedClueEventIds: [...memory.resolvedClueEventIds, event.id] } });
+      set({
+        memory: {
+          ...memory,
+          exploreEvent: null,
+          retryEvent: null,
+          clueFailed: false,
+          resolvedClueEventIds: memory.resolvedClueEventIds.includes(event.id)
+            ? memory.resolvedClueEventIds
+            : [...memory.resolvedClueEventIds, event.id],
+        },
+      });
       try {
         const res = await gateway.completeMemory(session.sessionId, memory.furnitureId, {
           observedEventIds: memory.observedEventIds,
           foundClueIds: [event.clueId],
         });
         const clue = res.session.clues.find((c) => c.id === event.clueId) ?? null;
-        set((s) => ({ session: res.session, memory: s.memory ? { ...s.memory, foundClue: clue } : null }));
+        if (res.session.progress.puzzleUnlocked && !session.progress.puzzleUnlocked) pendingUnlockToast = true;
+        set((s) => ({ session: res.session, memory: s.memory ? { ...s.memory, foundClue: clue, clueFailed: false } : null }));
       } catch (err) {
+        // keep the clue retryable: the CLUE card offers 「もう一度記録する」
+        set((s) => (s.memory ? { memory: { ...s.memory, clueFailed: true, retryEvent: event } } : {}));
         get().showToast(messageOf(err));
       }
     },
@@ -464,8 +495,7 @@ export const useGameStore = create<GameStore>()((set, get) => {
           /* visiting is cosmetic; clue progress was already saved when found */
         }
       }
-      const unlockedNow = get().session?.progress.puzzleUnlocked && !session?.progress.puzzleUnlocked;
-      if (unlockedNow) get().showToast("東の壁で、何かが動いた音がする。");
+      flushUnlockToast();
     },
 
     leaveMemory() {
@@ -474,12 +504,12 @@ export const useGameStore = create<GameStore>()((set, get) => {
         void get().returnFromMemory();
         return;
       }
-      go("BACK");
+      if (go("BACK")) flushUnlockToast();
     },
 
     openJournal() {
       const { phase } = get();
-      if (phase === "EXPLORING" || phase === "INSPECTING" || phase === "MEMORY_REVIEW") set({ journalOpen: true });
+      if (phase === "EXPLORING" || phase === "INSPECTING" || phase === "MEMORY_REVIEW" || phase === "PUZZLE") set({ journalOpen: true });
     },
     closeJournal() {
       set({ journalOpen: false });
@@ -542,7 +572,15 @@ export const useGameStore = create<GameStore>()((set, get) => {
       const { session } = get();
       if (!session) return;
       try {
-        const res = await gateway.finishEnding(session.sessionId, session.revision);
+        let res;
+        try {
+          res = await gateway.finishEnding(session.sessionId, session.revision);
+        } catch (err) {
+          if (!(err instanceof GatewayError && err.code === "CONFLICT")) throw err;
+          const fresh = await gateway.currentSession();
+          if (!fresh) throw err;
+          res = await gateway.finishEnding(fresh.sessionId, fresh.revision);
+        }
         set({ session: res.session, ending: res.ending, phase: "ENDING" });
       } catch (err) {
         set({ phase: "ERROR", error: { message: messageOf(err), retryable: true } });
@@ -551,7 +589,7 @@ export const useGameStore = create<GameStore>()((set, get) => {
 
     pause() {
       const { phase } = get();
-      if (phase === "PAUSED" || phase === "TITLE" || phase === "ENDING" || phase === "INITIALIZING") return;
+      if (!PAUSABLE_PHASES.has(phase)) return;
       set({ pausedFrom: phase, phase: "PAUSED", settingsOpen: false });
     },
     resume() {

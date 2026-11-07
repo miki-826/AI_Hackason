@@ -14,7 +14,7 @@ export function useGameInput() {
       keysDown.add(e.code);
       if (isTyping(e.target)) return;
       const s = useGameStore.getState();
-      if (e.code === "KeyE" && !e.repeat) {
+      if (e.code === "KeyE" && !e.repeat && !s.journalOpen && !s.settingsOpen) {
         if (s.phase === "MEMORY_EXPLORE") void s.collectFragment();
         else s.interact();
       } else if ((e.code === "KeyJ" || e.code === "Tab") && !e.repeat) {
