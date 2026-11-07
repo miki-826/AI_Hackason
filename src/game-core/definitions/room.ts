@@ -34,4 +34,5 @@ export const SEAL_PANEL = {
 export const SPAWN_CLEAR_RADIUS = 1.3;
 
 export const SEAL_PANEL_INTERACTION_ID = "seal_panel";
+export const SEAL_PANEL_NAME = "？？？";
 export const EXIT_DOOR_INTERACTION_ID = "exit_door";

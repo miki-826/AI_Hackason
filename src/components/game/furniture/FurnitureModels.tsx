@@ -229,14 +229,14 @@ export const BookshelfModel = memo(function BookshelfModel({ variant = "present"
     shelves.forEach((y, si) => {
       let x = -0.52;
       while (x < 0.5) {
-        const w = 0.028 + rnd() * 0.035;
-        const h = 0.22 + rnd() * 0.12;
+        const w = 0.04 + rnd() * 0.035;
+        const h = 0.2 + rnd() * (si === 4 ? 0.04 : si === 3 ? 0.08 : 0.12);
         const gap = si === 3 && x > -0.12 && x < 0.2; // where the photograph stood
         if (!gap) {
           const leaning = rnd() < 0.05;
           out.push({ x: x + w / 2, y: y + h / 2 + 0.02, w, h, d: 0.2 + rnd() * 0.06, c: colors[Math.floor(rnd() * colors.length)], tilt: leaning ? 0.22 : 0 });
         }
-        x += w + 0.003;
+        x += w + 0.006;
       }
     });
     return out;
@@ -254,7 +254,7 @@ export const BookshelfModel = memo(function BookshelfModel({ variant = "present"
         <M key={y} geo={rbox(1.12, 0.03, 0.37, 0.008)} mat={wood} p={[0, y, 0]} />
       ))}
       {books.map((b, i) => (
-        <M key={i} geo={rbox(b.w, b.h, b.d, 0.004)} mat={plainMaterial(b.c, 0.75)} p={[b.x, b.y, 0.02]} r={[0, 0, b.tilt]} />
+        <M key={i} geo={rbox(b.w, b.h, b.d, 0.004)} mat={plainMaterial(b.c, 0.75)} p={[b.x, b.y, 0.02]} r={[0, 0, b.tilt]} shadow={false} />
       ))}
       {/* a small vase and a box on the top shelf */}
       <M geo={vase(0.16, 0.05)} mat={plainMaterial("#3d5560", 0.25, 0.1)} p={[0.38, 1.8, 0.02]} />

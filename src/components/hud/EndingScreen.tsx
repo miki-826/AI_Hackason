@@ -25,9 +25,9 @@ export function EndingScreen() {
       <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-[#120c07]/70 via-transparent to-transparent" />
       {ending ? (
         <article className="relative h-full overflow-y-auto">
-          <div className="max-w-[34em] px-6 py-16 font-mincho leading-[2.05] text-parchment sm:px-14 sm:py-20">
+          <div className="max-w-[42em] px-6 py-16 font-mincho leading-[2.05] text-parchment sm:px-14 sm:py-20">
             <p className="text-sm tracking-widest text-brass-bright">脱出</p>
-            <h1 className="mt-2 text-[clamp(2rem,4vw,3rem)] font-bold tracking-wider text-[#fff3dc] drop-shadow-[0_2px_12px_rgba(0,0,0,0.6)]">{ending.title}</h1>
+            <h1 className="mt-2 whitespace-nowrap text-[clamp(1.2rem,4vw,2.4rem)] font-bold tracking-[0.02em] text-[#fff3dc] drop-shadow-[0_2px_12px_rgba(0,0,0,0.6)]">{ending.title}</h1>
             <section className="mt-10 space-y-5 text-lg">
               {ending.truth.map((t) => (
                 <p key={t} className="drop-shadow-[0_1px_3px_rgba(0,0,0,0.85)]">

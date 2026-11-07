@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useGameStore } from "@/stores/gameStore";
+import { SEAL_PANEL_NAME } from "@/game-core/definitions/room";
 import { Close, Keyhole } from "@/components/ui/icons";
 
 const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
@@ -55,7 +56,7 @@ export function PuzzlePanel() {
         </button>
         <div className="flex items-center gap-3">
           <Keyhole size={26} className="text-ember" />
-          <h2 id="seal-title" className="font-mincho text-2xl text-brass-bright">封印装置</h2>
+          <h2 id="seal-title" className="font-mincho text-2xl text-brass-bright">{SEAL_PANEL_NAME}</h2>
         </div>
         <p className="mt-2 text-sm text-mist">四つの数字を、左から順に。</p>
         <div key={shaking ? (puzzle.message ?? "w") : "idle"} className={`mt-5 flex justify-center gap-3 ${shaking ? "motion-safe:animate-[shake_0.4s_ease-in-out]" : ""}`} aria-label={`入力中の数字 ${code.length} 桁`}>

@@ -85,7 +85,7 @@ export default function GameCanvas() {
   }, []);
 
   const showMemory = memorySceneActive && memory;
-  const dpr: [number, number] = quality === "high" ? [1, 1.5] : quality === "standard" ? [0.85, 1.1] : [0.6, 0.85];
+  const dpr: [number, number] = quality === "high" ? [1.2, 1.6] : quality === "standard" ? [1, 1.15] : [0.7, 0.9];
 
   return (
     <div
@@ -98,7 +98,7 @@ export default function GameCanvas() {
         flat={quality !== "low"}
         resize={{ scroll: false, debounce: { scroll: 0, resize: 0 } }}
         dpr={dpr}
-        gl={{ antialias: quality !== "low", powerPreference: "high-performance" }}
+        gl={{ antialias: false, powerPreference: "high-performance" }}
         camera={{ fov: 70, near: 0.05, far: 60, position: PLAYER.spawn }}
         aria-label="3D の部屋"
       >
@@ -122,7 +122,7 @@ export default function GameCanvas() {
           style={{ background: "radial-gradient(ellipse at center, transparent 45%, rgba(40,20,5,0.55) 100%)" }}
         />
       ) : null}
-      <div aria-hidden className="grain absolute inset-0 opacity-60" />
+      <div aria-hidden className="grain absolute inset-0 opacity-25" />
     </div>
   );
 }

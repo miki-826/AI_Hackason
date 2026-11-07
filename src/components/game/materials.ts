@@ -36,7 +36,7 @@ export function photoTexture(url: string, repeatX = 1, repeatY = 1, color = true
       base = loader ? loader.load(url) : new THREE.Texture();
       base.wrapS = THREE.RepeatWrapping;
       base.wrapT = THREE.RepeatWrapping;
-      base.anisotropy = 4;
+      base.anisotropy = 8;
       photoBase.set(url, base);
     }
     const t = base.clone();
@@ -68,7 +68,7 @@ export function woodMaterial(color: string, roughness = 0.62): THREE.MeshPhysica
       metalness: 0,
       map: photoTexture(TEXTURES.wood),
       bumpMap: photoTexture(TEXTURES.wood, 1, 1, false),
-      bumpScale: 1.2,
+      bumpScale: 0.18,
       clearcoat: 0.35,
       clearcoatRoughness: 0.45,
     });
@@ -87,7 +87,7 @@ export function floorMaterial(variant: "present" | "memory"): THREE.MeshStandard
       color: variant === "present" ? "#b9a48f" : "#f0d2ac",
       map: photoTexture(TEXTURES.floor, rx, ry),
       bumpMap: photoTexture(TEXTURES.floor, rx, ry, false),
-      bumpScale: 2.2,
+      bumpScale: 0.28,
       roughness: variant === "present" ? 0.78 : 0.55,
       metalness: 0,
     });
@@ -107,7 +107,7 @@ export function wallMaterial(variant: "present" | "memory"): THREE.MeshStandardM
       color: variant === "present" ? "#9ea4a8" : "#ffe9cc",
       map: photoTexture(url, rx, ry),
       bumpMap: photoTexture(url, rx, ry, false),
-      bumpScale: 0.6,
+      bumpScale: 0.12,
       roughness: 0.92,
     });
     materialCache.set(key, m);

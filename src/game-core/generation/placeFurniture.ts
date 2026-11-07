@@ -126,11 +126,11 @@ export function isLayoutTraversable(furniture: FurnitureInstance[]): boolean {
 /** Verified fixed layout used when random placement fails (spec 3.3 step 6). */
 export const FALLBACK_LAYOUT: Omit<FurnitureInstance, "id">[] = [
   { type: "chair", position: [-0.8, 0, -0.6], rotationY: 0, required: true },
-  { type: "clock", position: [-3.5, 0, ROOM.minZ + 0.25], rotationY: 0, required: true },
-  { type: "desk", position: [2.6, 0, ROOM.minZ + 0.42], rotationY: 0, required: true },
-  { type: "bookshelf", position: [ROOM.minX + 0.24, 0, -1.5], rotationY: Math.PI / 2, required: false },
-  { type: "mirror", position: [ROOM.minX + 0.22, 0, 2.2], rotationY: Math.PI / 2, required: false },
-  { type: "drawer", position: [3.4, 0, ROOM.maxZ - 0.29], rotationY: Math.PI, required: false },
+  { type: "clock", position: [-3.5, 0, ROOM.minZ + 0.27], rotationY: 0, required: true },
+  { type: "desk", position: [2.6, 0, ROOM.minZ + 0.44], rotationY: 0, required: true },
+  { type: "bookshelf", position: [ROOM.minX + 0.27, 0, -1.5], rotationY: Math.PI / 2, required: false },
+  { type: "mirror", position: [ROOM.minX + 0.24, 0, 2.2], rotationY: Math.PI / 2, required: false },
+  { type: "drawer", position: [3.4, 0, ROOM.maxZ - 0.32], rotationY: Math.PI, required: false },
 ];
 
 export type PlacementResult = { furniture: FurnitureInstance[]; usedFallback: boolean; attempts: number };

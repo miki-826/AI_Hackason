@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useShallow } from "zustand/react/shallow";
 import { MEMORY_PHASES } from "@/game-core/state/transitions";
+import { SEAL_PANEL_NAME } from "@/game-core/definitions/room";
 import { useGameStore } from "@/stores/gameStore";
 import { ControlsHelp } from "@/components/ui/ControlsHelp";
 import { Gear, Satchel } from "@/components/ui/icons";
@@ -72,11 +73,11 @@ function ErrorScreen() {
 
 function missionText(p: { requiredCollectedCount: number; requiredClueCount: number; puzzleUnlocked: boolean; solved: boolean }, escape: boolean) {
   if (escape || p.solved) return { main: "光の差す扉へ向かう", sub: null };
-  if (p.puzzleUnlocked) return { main: "東の壁に現れた封印装置を調べる", sub: null };
+  if (p.puzzleUnlocked) return { main: `東の壁に現れた${SEAL_PANEL_NAME}を調べる`, sub: null };
   return { main: "家具に触れて、物の記憶をたどる", sub: `必須の記憶 ${p.requiredCollectedCount} / ${p.requiredClueCount}` };
 }
 
-const PROMPT: Record<string, string> = { furniture: "調べる", seal_panel: "封印装置に触れる", exit_door: "扉を開ける" };
+const PROMPT: Record<string, string> = { furniture: "調べる", seal_panel: `${SEAL_PANEL_NAME}に触れる`, exit_door: "扉を開ける" };
 
 function ExplorationHud() {
   const { phase, focusTarget, pointerLocked, progress, undecoded, interact, openJournal, pause } = useGameStore(

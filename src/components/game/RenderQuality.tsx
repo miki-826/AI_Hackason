@@ -1,8 +1,8 @@
 "use client";
 
 import { useThree } from "@react-three/fiber";
-import { Bloom, EffectComposer, N8AO, Noise, SMAA, ToneMapping, Vignette } from "@react-three/postprocessing";
-import { BlendFunction, ToneMappingMode } from "postprocessing";
+import { Bloom, EffectComposer, N8AO, SMAA, ToneMapping, Vignette } from "@react-three/postprocessing";
+import { ToneMappingMode } from "postprocessing";
 import { useEffect } from "react";
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
@@ -32,8 +32,8 @@ export function SceneEnvironment({ intensity }: { intensity: number }) {
 }
 
 /**
- * Cinematic post-processing. "high": ambient occlusion + bloom + grain + SMAA;
- * "standard": bloom + vignette at 75% resolution; "low": none.
+ * Cinematic post-processing. "high": ambient occlusion + restrained bloom + SMAA;
+ * "standard": full-resolution tone mapping + SMAA; "low": none.
  */
 export function PostFX({ quality, warm }: { quality: QualityPreset; warm: boolean }) {
   if (quality === "low") return null;
@@ -41,19 +41,18 @@ export function PostFX({ quality, warm }: { quality: QualityPreset; warm: boolea
     return (
       <EffectComposer multisampling={0}>
         <N8AO aoRadius={0.55} distanceFalloff={0.9} intensity={2.4} halfRes quality="performance" color="#0b0806" />
-        <Bloom intensity={warm ? 0.9 : 0.55} luminanceThreshold={0.72} luminanceSmoothing={0.25} mipmapBlur />
-        <Vignette offset={0.22} darkness={warm ? 0.55 : 0.78} />
-        <Noise premultiply blendFunction={BlendFunction.SOFT_LIGHT} opacity={0.35} />
+        <Bloom intensity={warm ? 0.65 : 0.35} luminanceThreshold={0.82} luminanceSmoothing={0.2} mipmapBlur />
+        <Vignette offset={0.22} darkness={warm ? 0.48 : 0.62} />
         <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
         <SMAA />
       </EffectComposer>
     );
   }
   return (
-    <EffectComposer multisampling={0} resolutionScale={0.75}>
-      <Bloom intensity={warm ? 0.8 : 0.5} luminanceThreshold={0.78} luminanceSmoothing={0.25} mipmapBlur levels={5} />
-      <Vignette offset={0.22} darkness={warm ? 0.55 : 0.75} />
+    <EffectComposer multisampling={0}>
+      <Vignette offset={0.22} darkness={warm ? 0.48 : 0.6} />
       <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
+      <SMAA />
     </EffectComposer>
   );
 }

@@ -4,9 +4,10 @@ import { useFrame } from "@react-three/fiber";
 import { memo, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { FURNITURE_DEFINITIONS } from "@/game-core/definitions/furniture";
-import { EXIT_DOOR_INTERACTION_ID, ROOM, SEAL_PANEL, SEAL_PANEL_INTERACTION_ID } from "@/game-core/definitions/room";
+import { EXIT_DOOR_INTERACTION_ID, ROOM, SEAL_PANEL, SEAL_PANEL_INTERACTION_ID, SEAL_PANEL_NAME } from "@/game-core/definitions/room";
 import type { FurnitureInstance as FurnitureInstanceData } from "@/game-core/types";
 import { createRng } from "@/game-core/seed/prng";
+import { closestPointOnAabb, furnitureAabb } from "@/game-core/generation/geometry";
 import type { QualityPreset } from "@/stores/settings";
 import { useGameStore } from "@/stores/gameStore";
 import { FURNITURE_MODELS } from "./furniture/FurnitureModels";
@@ -15,12 +16,21 @@ import { brassMaterial, floorMaterial, plainMaterial, wallMaterial, woodMaterial
 export type InteractionUserData = { interactionId: string; kind: "furniture" | "seal_panel" | "exit_door"; label: string };
 
 // ---------------------------------------------------------------- shell --
-const RoomShell = memo(function RoomShell() {
+const RoomShell = memo(function RoomShell({ furniture }: { furniture: FurnitureInstanceData[] }) {
   const floorMat = floorMaterial("present");
   const wallMat = wallMaterial("present");
   const ceilingMat = plainMaterial("#2a2622", 0.95);
   const trim = woodMaterial(PALETTE.darkWalnut, 0.7);
   const { width: W, depth: D, height: H } = ROOM;
+  const paperPositions = [
+    [-1.8, 2.4, 0.4],
+    [2.2, 1.6, -0.7],
+    [-4.2, -0.6, 1.2],
+    [3.9, 3.4, 2.1],
+  ].filter(([x, z]) => furniture.every((item) => {
+    const [px, pz] = closestPointOnAabb(furnitureAabb(item), x, z);
+    return Math.hypot(px - x, pz - z) > 0.26;
+  }));
   return (
     <group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow material={floorMat}>
@@ -55,6 +65,26 @@ const RoomShell = memo(function RoomShell() {
       <mesh position={[ROOM.maxX - 0.015, 0.07, 0]} material={trim}>
         <boxGeometry args={[0.03, 0.14, D]} />
       </mesh>
+      {/* dado rail and a worn carpet give the room a domestic scale */}
+      {[-4.98, 4.98].map((z) => (
+        <mesh key={`rail-z-${z}`} position={[0, 1.12, z]} material={trim}>
+          <boxGeometry args={[W, 0.055, 0.035]} />
+        </mesh>
+      ))}
+      {[-5.98, 5.98].map((x) => (
+        <mesh key={`rail-x-${x}`} position={[x, 1.12, 0]} material={trim}>
+          <boxGeometry args={[0.035, 0.055, D]} />
+        </mesh>
+      ))}
+      <mesh position={[0, 0.008, 0.25]} rotation={[-Math.PI / 2, 0, 0]} material={plainMaterial("#3d3029", 0.98)} receiveShadow>
+        <planeGeometry args={[4.1, 3.1]} />
+      </mesh>
+      <mesh position={[0, 0.009, 0.25]} rotation={[-Math.PI / 2, 0, 0]} material={plainMaterial("#65503a", 0.95)} receiveShadow>
+        <planeGeometry args={[3.8, 2.8]} />
+      </mesh>
+      <mesh position={[0, 0.01, 0.25]} rotation={[-Math.PI / 2, 0, 0]} material={plainMaterial("#42352c", 0.98)} receiveShadow>
+        <planeGeometry args={[3.48, 2.48]} />
+      </mesh>
       {/* ceiling beams */}
       {[-3.6, 0, 3.6].map((x) => (
         <mesh key={x} position={[x, H - 0.12, 0]} material={trim}>
@@ -62,12 +92,7 @@ const RoomShell = memo(function RoomShell() {
         </mesh>
       ))}
       {/* scattered papers */}
-      {[
-        [-1.8, 2.4, 0.4],
-        [2.2, 1.6, -0.7],
-        [-4.2, -0.6, 1.2],
-        [3.9, 3.4, 2.1],
-      ].map(([x, z, r]) => (
+      {paperPositions.map(([x, z, r]) => (
         <mesh key={`${x}${z}`} position={[x, 0.004, z]} rotation={[-Math.PI / 2, 0, r]} material={plainMaterial("#bfb49c", 0.95)}>
           <planeGeometry args={[0.21, 0.29]} />
         </mesh>
@@ -245,7 +270,7 @@ function SealPanel() {
   if (!unlocked || solved) return null;
   const [x, y, z] = SEAL_PANEL.position;
   const brass = brassMaterial();
-  const userData: InteractionUserData = { interactionId: SEAL_PANEL_INTERACTION_ID, kind: "seal_panel", label: "封印装置" };
+  const userData: InteractionUserData = { interactionId: SEAL_PANEL_INTERACTION_ID, kind: "seal_panel", label: SEAL_PANEL_NAME };
   return (
     <group position={[x, y, z]} rotation={[0, SEAL_PANEL.rotationY, 0]}>
       <group ref={group} userData={userData} position={[0, 0, -0.08]}>
@@ -331,7 +356,7 @@ export function RoomScene({
       <directionalLight position={[-4, 3.6, 4]} intensity={0.35} color="#8aa0c2" />
       <PendantLamp quality={quality} />
       <group ref={worldRef}>
-        <RoomShell />
+        <RoomShell furniture={furniture} />
         {furniture.map((f) => (
           <FurnitureInstance key={f.id} data={f} interactive={interactive} />
         ))}
