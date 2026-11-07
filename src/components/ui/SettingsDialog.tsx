@@ -172,6 +172,26 @@ export function SettingsDialog() {
               value={Math.round(settings.ambienceVolume * 100)}
               onChange={(v) => updateSettings({ ambienceVolume: v / 100 })}
             />
+            <RangeRow
+              id="setting-bgm-volume"
+              label="BGM"
+              valueText={`${Math.round(settings.bgmVolume * 100)}%`}
+              min={0}
+              max={100}
+              step={1}
+              value={Math.round(settings.bgmVolume * 100)}
+              onChange={(v) => updateSettings({ bgmVolume: v / 100 })}
+            />
+            <RangeRow
+              id="setting-voice-volume"
+              label="読み上げ音声"
+              valueText={`${Math.round(settings.voiceVolume * 100)}%`}
+              min={0}
+              max={100}
+              step={1}
+              value={Math.round(settings.voiceVolume * 100)}
+              onChange={(v) => updateSettings({ voiceVolume: v / 100 })}
+            />
           </section>
 
           <fieldset className="border-t border-brass-dim/30 pt-4">
@@ -211,6 +231,13 @@ export function SettingsDialog() {
               description="記憶の追体験中に会話と情景の字幕を表示します"
               checked={settings.subtitles}
               onChange={(checked) => updateSettings({ subtitles: checked })}
+            />
+            <ToggleRow
+              id="setting-voice"
+              label="読み上げ"
+              description="記憶の語り・字幕・遊び方を音声で読み上げます"
+              checked={settings.voiceEnabled}
+              onChange={(checked) => updateSettings({ voiceEnabled: checked })}
             />
             <ToggleRow
               id="setting-invert-y"

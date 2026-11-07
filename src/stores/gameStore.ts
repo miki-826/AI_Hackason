@@ -78,6 +78,8 @@ export type GameState = {
   pointerLocked: boolean;
   /** true while the 3D canvas shows the memory set instead of the room */
   memorySceneActive: boolean;
+  /** 遊び方 slides overlay */
+  manualOpen: boolean;
 };
 
 export type GameActions = {
@@ -125,6 +127,8 @@ export type GameActions = {
   abandonGame(): Promise<void>;
   setPointerLocked(locked: boolean): void;
   setMemorySceneActive(active: boolean): void;
+  openManual(): void;
+  closeManual(): void;
 };
 
 export type GameStore = GameState & GameActions;
@@ -279,6 +283,14 @@ export const useGameStore = create<GameStore>()((set, get) => {
     hasSavedGame: null,
     pointerLocked: false,
     memorySceneActive: false,
+    manualOpen: false,
+
+    openManual() {
+      set({ manualOpen: true });
+    },
+    closeManual() {
+      set({ manualOpen: false });
+    },
 
     setMemorySceneActive(active) {
       if (get().memorySceneActive !== active) set({ memorySceneActive: active });
@@ -343,8 +355,8 @@ export const useGameStore = create<GameStore>()((set, get) => {
     },
 
     interact() {
-      const { phase, focusTarget, session, journalOpen, settingsOpen } = get();
-      if ((phase !== "EXPLORING" && phase !== "ESCAPE") || !focusTarget || journalOpen || settingsOpen) return;
+      const { phase, focusTarget, session, journalOpen, settingsOpen, manualOpen } = get();
+      if ((phase !== "EXPLORING" && phase !== "ESCAPE") || !focusTarget || journalOpen || settingsOpen || manualOpen) return;
       if (phase === "ESCAPE") {
         if (focusTarget.kind === "exit_door" && go("ESCAPED")) void get().escapeComplete();
         return;
@@ -641,3 +653,8 @@ export const useGameStore = create<GameStore>()((set, get) => {
 
 /** Single derived selector for HUD visibility (spec 7.4). */
 export const selectHudVisible = (s: GameState) => s.phase === "EXPLORING" && !s.journalOpen;
+
+// Dev-only handle for automated UI checks (compiled out of production builds).
+if (process.env.NODE_ENV !== "production" && typeof window !== "undefined") {
+  (window as unknown as { __ts?: () => GameStore }).__ts = () => useGameStore.getState();
+}

@@ -5,16 +5,20 @@ import { useEffect } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useGameStore } from "@/stores/gameStore";
 import { ControlsHelp } from "./ControlsHelp";
+import { ManualSlides } from "./ManualSlides";
 import { SettingsDialog } from "./SettingsDialog";
 
 /** SC-01: title, start, continue, controls, settings. */
 export function TitleMenu() {
   const router = useRouter();
-  const { hasSavedGame, controlsOpen, settingsOpen, checkSavedGame, hydrateSettings, toggleControls, openSettings } = useGameStore(
+  const { hasSavedGame, controlsOpen, settingsOpen, manualOpen, checkSavedGame, hydrateSettings, toggleControls, openSettings, openManual, closeManual } = useGameStore(
     useShallow((s) => ({
       hasSavedGame: s.hasSavedGame,
       controlsOpen: s.controlsOpen,
       settingsOpen: s.settingsOpen,
+      manualOpen: s.manualOpen,
+      openManual: s.openManual,
+      closeManual: s.closeManual,
       checkSavedGame: s.checkSavedGame,
       hydrateSettings: s.hydrateSettings,
       toggleControls: s.toggleControls,
@@ -62,6 +66,9 @@ export function TitleMenu() {
           </p>
         ) : null}
         <div className="mt-2 flex justify-center gap-6 text-parchment/85">
+          <button type="button" className="min-h-11 px-2 underline-offset-4 hover:text-parchment hover:underline" onClick={openManual}>
+            遊び方
+          </button>
           <button type="button" className="min-h-11 px-2 underline-offset-4 hover:text-parchment hover:underline" onClick={() => toggleControls(true)}>
             操作説明
           </button>
@@ -73,6 +80,7 @@ export function TitleMenu() {
       <p className="absolute bottom-5 text-xs text-mist">PC ブラウザ（Chrome / Edge）推奨・マウスとキーボードで遊びます</p>
       {controlsOpen ? <ControlsHelp /> : null}
       {settingsOpen ? <SettingsDialog /> : null}
+      {manualOpen ? <ManualSlides onClose={closeManual} startLabel="閉じる" /> : null}
     </div>
   );
 }

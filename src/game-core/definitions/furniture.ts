@@ -37,7 +37,7 @@ export const FURNITURE_DEFINITIONS: Record<FurnitureType, FurnitureDefinition> =
     footprint: { w: 0.55, d: 0.55 },
     height: 1.05,
     focusPoint: [0, 0.7, 0],
-    memoryAnchor: { position: [-0.35, 1.08, 1.32], lookAt: "dining_table" },
+    memoryAnchor: { position: [-0.35, 1.38, 1.62], lookAt: "dining_table" },
     sigil: "#c79a5b",
   },
   clock: {

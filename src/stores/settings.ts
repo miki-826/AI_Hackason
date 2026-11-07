@@ -9,6 +9,10 @@ export type Settings = {
   masterVolume: number;
   sfxVolume: number;
   ambienceVolume: number;
+  bgmVolume: number;
+  voiceVolume: number;
+  /** read subtitles / narration aloud */
+  voiceEnabled: boolean;
   quality: QualityPreset;
   subtitles: boolean;
   invertY: boolean;
@@ -19,13 +23,16 @@ export const DEFAULT_SETTINGS: Settings = {
   fov: 70,
   masterVolume: 0.8,
   sfxVolume: 0.8,
-  ambienceVolume: 0.6,
-  quality: "standard",
+  ambienceVolume: 0.5,
+  bgmVolume: 0.55,
+  voiceVolume: 0.9,
+  voiceEnabled: true,
+  quality: "high",
   subtitles: true,
   invertY: false,
 };
 
-const KEY = "ts:settings:v1";
+const KEY = "ts:settings:v2";
 
 const clamp = (v: unknown, min: number, max: number, d: number) =>
   typeof v === "number" && Number.isFinite(v) ? Math.min(max, Math.max(min, v)) : d;
@@ -38,6 +45,9 @@ export function sanitizeSettings(raw: Partial<Settings> | null | undefined): Set
     masterVolume: clamp(r.masterVolume, 0, 1, DEFAULT_SETTINGS.masterVolume),
     sfxVolume: clamp(r.sfxVolume, 0, 1, DEFAULT_SETTINGS.sfxVolume),
     ambienceVolume: clamp(r.ambienceVolume, 0, 1, DEFAULT_SETTINGS.ambienceVolume),
+    bgmVolume: clamp(r.bgmVolume, 0, 1, DEFAULT_SETTINGS.bgmVolume),
+    voiceVolume: clamp(r.voiceVolume, 0, 1, DEFAULT_SETTINGS.voiceVolume),
+    voiceEnabled: typeof r.voiceEnabled === "boolean" ? r.voiceEnabled : DEFAULT_SETTINGS.voiceEnabled,
     quality: r.quality === "low" || r.quality === "high" || r.quality === "standard" ? r.quality : DEFAULT_SETTINGS.quality,
     subtitles: typeof r.subtitles === "boolean" ? r.subtitles : DEFAULT_SETTINGS.subtitles,
     invertY: typeof r.invertY === "boolean" ? r.invertY : DEFAULT_SETTINGS.invertY,

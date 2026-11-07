@@ -69,7 +69,7 @@ export function PlayerRig({ furniture, world }: { furniture: FurnitureInstance[]
     const delta = Math.min(rawDelta, 0.05);
     const state = useGameStore.getState();
     const { phase, settings } = state;
-    const active = (phase === "EXPLORING" || phase === "ESCAPE") && !state.journalOpen && !state.settingsOpen;
+    const active = (phase === "EXPLORING" || phase === "ESCAPE") && !state.journalOpen && !state.settingsOpen && !state.manualOpen;
 
     // look
     const look = consumeLook();

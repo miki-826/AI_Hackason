@@ -17,6 +17,7 @@
 | 手掛かり帳 | J / Tab |
 | 一時停止・閉じる | ESC |
 
+0. 新しく始めると、画像つきのスライドで「遊び方」が流れる（読み上げ付き・いつでもスキップ可。タイトルの「遊び方」からも見られる）。
 1. 部屋の家具（椅子・振り子時計・書斎机は必ずある）に照準を合わせ **E**。
 2. 「物の記憶を見る」で、その家具の視点から過去を追体験。琥珀色に光る欠片に触れると手掛かりを得る。
 3. 手掛かり帳で記憶をつなげて「解読」。三つの必須の記憶が揃うと東の壁に封印装置が現れる。
@@ -38,7 +39,9 @@ npm run typecheck && npm run lint && npm test && npm run build
    - `SESSION_COOKIE_SECRET` — **必須**。長いランダム文字列（`openssl rand -hex 32`）。未設定でも動作するが、
      開発用の固定鍵になるためセッション改ざんを防げない。
    - `OPENAI_API_KEY` + `OPENAI_MODEL` — 任意。設定すると AI が記憶の語りを生成（失敗時は固定ストーリー）。
-   - `DISABLE_AI_GENERATION=true` — AI 費用の緊急停止スイッチ。
+   - `OPENAI_TTS_MODEL`（任意、`OPENAI_TTS_VOICE` 既定 `sage`）— 設定すると字幕・語りをニューラル音声で読み上げ。
+     未設定時はブラウザの日本語音声（Web Speech API）で読み上げる。TTS はそのセッションのゲーム内テキストのみ受け付ける。
+   - `DISABLE_AI_GENERATION=true` — AI 費用の緊急停止スイッチ（物語生成と TTS を停止）。
 3. Deploy。`/api/health` で稼働確認できる。
 
 ## アーキテクチャ
@@ -79,7 +82,8 @@ src/
 
 ## 既知の制約
 
-- 家具・人物はプリミティブで構成した自作モデル（GLB 差し替え可能な構造）。テクスチャと音はコード生成のため外部素材ライセンスなし（[`docs/ASSET_LICENSES.md`](./docs/ASSET_LICENSES.md)）。
+- 家具・人物はプリミティブで構成した自作モデル（GLB 差し替え可能な構造）。床・壁紙・木目テクスチャ、タイトル背景、遊び方の挿絵は ChatGPT の画像生成で作成。BGM はオーナー提供素材（[`docs/ASSET_LICENSES.md`](./docs/ASSET_LICENSES.md)）。
+- 画質「高」は AO・ブルーム・ソフトシャドウを使うため GPU 負荷が高い。重い場合は設定で「標準」「低」へ。
 - 仕様の PostgreSQL 永続化は v2.0 では署名付き Cookie に置き換えている（理由は [`docs/ADR/0001-stateless-sessions.md`](./docs/ADR/0001-stateless-sessions.md)）。レート制限はインスタンス単位のメモリ実装。
 - PC ブラウザ（Chrome / Edge, WebGL2）向け。スマートフォンの一人称操作は非対応（仕様の非目標）。
 - Playwright E2E は未整備（単体・統合テストと手動プレイで検証）。

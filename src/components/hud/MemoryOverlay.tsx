@@ -36,7 +36,7 @@ export function MemoryOverlay() {
           <Back size={18} /> 戻る
         </button>
       ) : null}
-      <div className="absolute left-1/2 top-6 -translate-x-1/2 text-center">
+      <div className="absolute left-1/2 top-5 -translate-x-1/2 bg-ink/55 px-5 py-1.5 text-center">
         <p className="font-mincho text-xl text-brass-bright drop-shadow">{memory.story.title}</p>
         <p className="mt-0.5 text-xs text-parchment/80">{type ? FURNITURE_DEFINITIONS[type].name : ""}の記憶</p>
       </div>

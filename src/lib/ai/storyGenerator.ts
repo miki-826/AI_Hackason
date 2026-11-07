@@ -10,7 +10,12 @@ import { memoryStoryJsonSchema, memoryStorySchema, validateStorySemantics } from
 
 type Result = { story: MemoryStory; source: "ai" | "fallback"; record: SessionRecord };
 const cache = new Map<string, Promise<Result>>();
+const completedStories = new Map<string, MemoryStory>();
 export function hasCachedStory(record: SessionRecord, furnitureId: string): boolean { return cache.has(`${record.id}:${record.seed}:${furnitureId}`); }
+export function cachedStoriesForSession(record: SessionRecord): MemoryStory[] {
+  const prefix = `${record.id}:${record.seed}:`;
+  return [...completedStories].filter(([key]) => key.startsWith(prefix)).map(([, story]) => story);
+}
 export function aiEnabled(): boolean { return !!(process.env.OPENAI_API_KEY && process.env.OPENAI_MODEL && process.env.DISABLE_AI_GENERATION !== "true"); }
 
 export async function getMemoryStory(args: { record: SessionRecord; plan: GamePlan; furnitureId: string }): Promise<Result> {
@@ -20,7 +25,11 @@ export async function getMemoryStory(args: { record: SessionRecord; plan: GamePl
     const result = await hit;
     return { ...result, record: { ...args.record, aiGenerations: Math.max(args.record.aiGenerations, result.record.aiGenerations) } };
   }
-  const pending = generate(args);
+  const pending = generate(args).then((result) => {
+    completedStories.set(key, result.story);
+    if (completedStories.size > 500) completedStories.delete(completedStories.keys().next().value!);
+    return result;
+  });
   cache.set(key, pending);
   if (cache.size > 500) cache.delete(cache.keys().next().value!);
   return pending;

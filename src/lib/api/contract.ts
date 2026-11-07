@@ -112,4 +112,14 @@ export type EndingResponse = {
 };
 
 /** GET /api/health */
-export type HealthResponse = { status: "ok"; version: string; ai: "enabled" | "disabled"; time: string };
+export type HealthResponse = {
+  status: "ok";
+  version: string;
+  ai: "enabled" | "disabled";
+  /** server-side neural TTS (OpenAI) availability; browser speech is used otherwise */
+  tts: "enabled" | "disabled";
+  time: string;
+};
+
+/** POST /sessions/:id/tts — body; response is audio/mpeg bytes */
+export const ttsBody = z.object({ text: z.string().min(1).max(240) }).strict();

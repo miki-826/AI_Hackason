@@ -26,12 +26,12 @@ export function InspectPanel() {
   const def = type ? FURNITURE_DEFINITIONS[type] : null;
   const name = inspecting.detail?.name ?? def?.name ?? "";
   return (
-    <div className="pointer-events-auto fixed inset-0 z-20 bg-gradient-to-l from-ink/80 via-ink/30 to-transparent">
+    <div className="pointer-events-auto fixed inset-0 z-20 grid place-items-center bg-ink/55 px-4 backdrop-blur-[2px]">
       <section
         role="dialog"
         aria-modal="true"
         aria-labelledby="inspect-title"
-        className="brass-panel absolute bottom-6 right-6 w-[min(92vw,26rem)] p-6 max-sm:inset-x-4 max-sm:w-auto"
+        className="brass-panel relative w-[min(92vw,30rem)] p-7 motion-safe:animate-[fadein_0.25s_ease-out]"
       >
         <button type="button" aria-label="閉じる" className="absolute right-3 top-3 grid h-11 w-11 place-items-center text-mist hover:text-parchment" onClick={closeInspect}>
           <Close size={20} />

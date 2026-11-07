@@ -3,32 +3,10 @@
 import * as THREE from "three";
 
 /**
- * Procedural textures (generated once on a canvas) so the game ships no
- * third-party texture assets — no licensing to track (spec 3.2).
+ * Materials and textures shared by the room, furniture and memory scenes.
  */
 
-function seeded(seed: number) {
-  let s = seed >>> 0;
-  return () => {
-    s = (s * 1664525 + 1013904223) >>> 0;
-    return s / 4294967296;
-  };
-}
 
-function canvasTexture(size: number, draw: (ctx: CanvasRenderingContext2D, rnd: () => number) => void, seed: number) {
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return new THREE.Texture();
-  draw(ctx, seeded(seed));
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.wrapS = THREE.RepeatWrapping;
-  tex.wrapT = THREE.RepeatWrapping;
-  tex.anisotropy = 4;
-  return tex;
-}
 
 const cache = new Map<string, THREE.Texture>();
 
@@ -41,182 +19,108 @@ function cached(key: string, make: () => THREE.Texture) {
   return t;
 }
 
-/** Long wood grain, light-neutral so it can be tinted by material colour. */
-export function woodGrainTexture(): THREE.Texture {
-  return cached("wood", () =>
-    canvasTexture(
-      256,
-      (ctx, rnd) => {
-        ctx.fillStyle = "#bfbfbf";
-        ctx.fillRect(0, 0, 256, 256);
-        for (let i = 0; i < 140; i++) {
-          const x = rnd() * 256;
-          const w = 0.6 + rnd() * 2.2;
-          const shade = 120 + Math.floor(rnd() * 110);
-          ctx.strokeStyle = `rgba(${shade},${shade},${shade},${0.18 + rnd() * 0.3})`;
-          ctx.lineWidth = w;
-          ctx.beginPath();
-          let y = 0;
-          ctx.moveTo(x, y);
-          while (y < 256) {
-            y += 16;
-            ctx.lineTo(x + Math.sin(y * 0.05 + i) * 2.5, y);
-          }
-          ctx.stroke();
-        }
-        for (let k = 0; k < 6; k++) {
-          const cx = rnd() * 256;
-          const cy = rnd() * 256;
-          const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, 6 + rnd() * 8);
-          g.addColorStop(0, "rgba(60,60,60,0.55)");
-          g.addColorStop(1, "rgba(60,60,60,0)");
-          ctx.fillStyle = g;
-          ctx.fillRect(cx - 16, cy - 16, 32, 32);
-        }
-      },
-      11,
-    ),
-  );
-}
-
-/** Floor planks with seams, scuffs and dust. */
-export function floorTexture(): THREE.Texture {
-  return cached("floor", () => {
-    const t = canvasTexture(
-      512,
-      (ctx, rnd) => {
-        const planks = 8;
-        const pw = 512 / planks;
-        for (let p = 0; p < planks; p++) {
-          let y = -rnd() * 300;
-          while (y < 512) {
-            const len = 220 + rnd() * 260;
-            const base = 70 + Math.floor(rnd() * 35);
-            ctx.fillStyle = `rgb(${base + 28},${base + 12},${base - 6})`;
-            ctx.fillRect(p * pw, y, pw, len);
-            for (let g = 0; g < 18; g++) {
-              ctx.strokeStyle = `rgba(30,20,12,${0.12 + rnd() * 0.2})`;
-              ctx.lineWidth = 0.6 + rnd();
-              const gx = p * pw + rnd() * pw;
-              ctx.beginPath();
-              ctx.moveTo(gx, y);
-              ctx.lineTo(gx + (rnd() - 0.5) * 6, y + len);
-              ctx.stroke();
-            }
-            ctx.fillStyle = "rgba(10,6,3,0.85)";
-            ctx.fillRect(p * pw, y, pw, 2);
-            y += len;
-          }
-          ctx.fillStyle = "rgba(8,5,3,0.9)";
-          ctx.fillRect(p * pw, 0, 2, 512);
-        }
-        for (let s = 0; s < 40; s++) {
-          ctx.fillStyle = `rgba(200,190,170,${rnd() * 0.05})`;
-          ctx.beginPath();
-          ctx.ellipse(rnd() * 512, rnd() * 512, 10 + rnd() * 50, 4 + rnd() * 20, rnd() * 3, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      },
-      23,
-    );
-    t.repeat.set(3, 2.5);
-    return t;
-  });
-}
-
-/** Faded damask wallpaper with water stains and peeling seams. */
-export function wallTexture(): THREE.Texture {
-  return cached("wall", () => {
-    const t = canvasTexture(
-      512,
-      (ctx, rnd) => {
-        ctx.fillStyle = "#4a4f52";
-        ctx.fillRect(0, 0, 512, 512);
-        ctx.strokeStyle = "rgba(160,150,120,0.08)";
-        ctx.lineWidth = 2;
-        for (let x = 0; x < 512; x += 64) {
-          for (let y = 0; y < 512; y += 96) {
-            const ox = (y / 96) % 2 === 0 ? 0 : 32;
-            ctx.beginPath();
-            ctx.ellipse(x + ox + 32, y + 48, 14, 30, 0, 0, Math.PI * 2);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(x + ox + 32, y + 10);
-            ctx.lineTo(x + ox + 32, y + 86);
-            ctx.stroke();
-          }
-        }
-        for (let x = 0; x < 512; x += 128) {
-          ctx.fillStyle = "rgba(10,10,10,0.25)";
-          ctx.fillRect(x, 0, 1.5, 512);
-        }
-        for (let s = 0; s < 14; s++) {
-          const cx = rnd() * 512;
-          const cy = rnd() * 512;
-          const r = 30 + rnd() * 120;
-          const g = ctx.createRadialGradient(cx, cy, r * 0.2, cx, cy, r);
-          g.addColorStop(0, `rgba(40,32,20,${0.2 + rnd() * 0.25})`);
-          g.addColorStop(1, "rgba(40,32,20,0)");
-          ctx.fillStyle = g;
-          ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
-        }
-        for (let n = 0; n < 9000; n++) {
-          const v = Math.floor(rnd() * 255);
-          ctx.fillStyle = `rgba(${v},${v},${v},0.03)`;
-          ctx.fillRect(rnd() * 512, rnd() * 512, 1, 1);
-        }
-      },
-      37,
-    );
-    t.repeat.set(2.5, 1);
-    return t;
-  });
-}
-
-/** Warm striped wallpaper used inside memories (the room as it once was). */
-export function memoryWallTexture(): THREE.Texture {
-  return cached("memwall", () => {
-    const t = canvasTexture(
-      256,
-      (ctx, rnd) => {
-        ctx.fillStyle = "#b98b5a";
-        ctx.fillRect(0, 0, 256, 256);
-        for (let x = 0; x < 256; x += 32) {
-          ctx.fillStyle = "rgba(120,70,35,0.35)";
-          ctx.fillRect(x, 0, 10, 256);
-          ctx.fillStyle = "rgba(255,230,180,0.12)";
-          ctx.fillRect(x + 14, 0, 2, 256);
-        }
-        for (let n = 0; n < 3000; n++) {
-          ctx.fillStyle = `rgba(80,40,10,${rnd() * 0.06})`;
-          ctx.fillRect(rnd() * 256, rnd() * 256, 2, 2);
-        }
-      },
-      41,
-    );
-    t.repeat.set(4, 1);
-    return t;
-  });
-}
-
 const materialCache = new Map<string, THREE.Material>();
 
-/** Shared tinted wood material (one instance per colour). */
-export function woodMaterial(color: string, roughness = 0.72): THREE.MeshStandardMaterial {
+// ---------------------------------------------------------------------------
+// Photo textures (generated with ChatGPT image generation, made tileable and
+// compressed — see docs/ASSET_LICENSES.md). Loaded once, cloned per repeat.
+// ---------------------------------------------------------------------------
+const loader = typeof window !== "undefined" ? new THREE.TextureLoader() : null;
+const photoBase = new Map<string, THREE.Texture>();
+
+export function photoTexture(url: string, repeatX = 1, repeatY = 1, color = true): THREE.Texture {
+  const key = `${url}|${repeatX}|${repeatY}|${color}`;
+  return cached(key, () => {
+    let base = photoBase.get(url);
+    if (!base) {
+      base = loader ? loader.load(url) : new THREE.Texture();
+      base.wrapS = THREE.RepeatWrapping;
+      base.wrapT = THREE.RepeatWrapping;
+      base.anisotropy = 8;
+      photoBase.set(url, base);
+    }
+    const t = base.clone();
+    t.source = base.source; // share the image, independent repeat
+    t.colorSpace = color ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+    t.repeat.set(repeatX, repeatY);
+    t.needsUpdate = true;
+    return t;
+  });
+}
+
+export const TEXTURES = {
+  floor: "/textures/floor.jpg",
+  wallpaper: "/textures/wallpaper.jpg",
+  wood: "/textures/wood.jpg",
+  memoryWallpaper: "/textures/memory-wallpaper.jpg",
+} as const;
+
+const WHITE = new THREE.Color("#ffffff");
+
+/** Varnished wood (photo grain + bump + light clearcoat), one instance per tint. */
+export function woodMaterial(color: string, roughness = 0.62): THREE.MeshPhysicalMaterial {
   const key = `wood:${color}:${roughness}`;
-  let m = materialCache.get(key) as THREE.MeshStandardMaterial | undefined;
+  let m = materialCache.get(key) as THREE.MeshPhysicalMaterial | undefined;
   if (!m) {
-    m = new THREE.MeshStandardMaterial({ color, roughness, metalness: 0.02, map: woodGrainTexture() });
+    const tint = new THREE.Color(color).lerp(WHITE, 0.45);
+    m = new THREE.MeshPhysicalMaterial({
+      color: tint,
+      roughness,
+      metalness: 0,
+      map: photoTexture(TEXTURES.wood),
+      bumpMap: photoTexture(TEXTURES.wood, 1, 1, false),
+      bumpScale: 1.2,
+      clearcoat: 0.35,
+      clearcoatRoughness: 0.45,
+    });
     materialCache.set(key, m);
   }
   return m;
 }
 
-export function brassMaterial(): THREE.MeshStandardMaterial {
-  const key = "brass";
+export function floorMaterial(variant: "present" | "memory"): THREE.MeshStandardMaterial {
+  const key = `floor:${variant}`;
   let m = materialCache.get(key) as THREE.MeshStandardMaterial | undefined;
   if (!m) {
-    m = new THREE.MeshStandardMaterial({ color: "#b8925a", roughness: 0.35, metalness: 0.85 });
+    const rx = variant === "present" ? 4 : 2.5;
+    const ry = variant === "present" ? 3.3 : 2.5;
+    m = new THREE.MeshStandardMaterial({
+      color: variant === "present" ? "#b9a48f" : "#f0d2ac",
+      map: photoTexture(TEXTURES.floor, rx, ry),
+      bumpMap: photoTexture(TEXTURES.floor, rx, ry, false),
+      bumpScale: 2.2,
+      roughness: variant === "present" ? 0.78 : 0.55,
+      metalness: 0,
+    });
+    materialCache.set(key, m);
+  }
+  return m;
+}
+
+export function wallMaterial(variant: "present" | "memory"): THREE.MeshStandardMaterial {
+  const key = `wall:${variant}`;
+  let m = materialCache.get(key) as THREE.MeshStandardMaterial | undefined;
+  if (!m) {
+    const url = variant === "present" ? TEXTURES.wallpaper : TEXTURES.memoryWallpaper;
+    const rx = variant === "present" ? 3.6 : 4.5;
+    const ry = variant === "present" ? 1.4 : 1.6;
+    m = new THREE.MeshStandardMaterial({
+      color: variant === "present" ? "#9ea4a8" : "#ffe9cc",
+      map: photoTexture(url, rx, ry),
+      bumpMap: photoTexture(url, rx, ry, false),
+      bumpScale: 0.6,
+      roughness: 0.92,
+    });
+    materialCache.set(key, m);
+  }
+  return m;
+}
+
+export function brassMaterial(): THREE.MeshPhysicalMaterial {
+  const key = "brass";
+  let m = materialCache.get(key) as THREE.MeshPhysicalMaterial | undefined;
+  if (!m) {
+    m = new THREE.MeshPhysicalMaterial({ color: "#c49a5c", roughness: 0.32, metalness: 1, clearcoat: 0.2 });
     materialCache.set(key, m);
   }
   return m;

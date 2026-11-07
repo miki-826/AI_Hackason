@@ -1,15 +1,30 @@
 "use client";
 
 /**
- * Synthesised audio (WebAudio) — no third-party sound files, so nothing to
- * license (spec 11.2). Starts only after a user gesture (autoplay policy).
+ * Game audio (WebAudio).
+ * - BGM: owner-provided track (public/audio/bgm-house-at-evening.mp4), streamed
+ *   through an <audio> element so playback starts without decoding the file.
+ * - Ambience and one-shots are synthesised (no third-party samples).
+ * - Voice: narration clips from the narrator are played on their own bus and
+ *   duck the BGM while speaking.
+ * Everything starts only after a user gesture (autoplay policy).
  */
-type Bus = { master: GainNode; sfx: GainNode; amb: GainNode };
+type Bus = { master: GainNode; sfx: GainNode; amb: GainNode; bgm: GainNode; voice: GainNode };
+
+export type BgmMode = "title" | "room" | "memory" | "ending" | "off";
+
+const BGM_SRC = "/audio/bgm-house-at-evening.mp4";
+const BGM_LEVEL: Record<BgmMode, number> = { title: 1, room: 0.55, memory: 0.85, ending: 1, off: 0 };
 
 let ctx: AudioContext | null = null;
 let bus: Bus | null = null;
 let ambience: { stop(): void; mode: "room" | "memory" } | null = null;
 let tickTimer: ReturnType<typeof setInterval> | null = null;
+let bgmEl: HTMLAudioElement | null = null;
+let bgmGainNode: GainNode | null = null;
+let bgmMode: BgmMode = "off";
+let ducked = false;
+let userBgm = 0.55;
 
 function ensure(): { ctx: AudioContext; bus: Bus } | null {
   if (typeof window === "undefined") return null;
@@ -18,12 +33,13 @@ function ensure(): { ctx: AudioContext; bus: Bus } | null {
     if (!AC) return null;
     ctx = new AC();
     const master = ctx.createGain();
-    const sfx = ctx.createGain();
-    const amb = ctx.createGain();
-    sfx.connect(master);
-    amb.connect(master);
+    const mk = () => {
+      const g = ctx!.createGain();
+      g.connect(master);
+      return g;
+    };
+    bus = { master, sfx: mk(), amb: mk(), bgm: mk(), voice: mk() };
     master.connect(ctx.destination);
-    bus = { master, sfx, amb };
   }
   if (ctx.state === "suspended") void ctx.resume();
   return bus ? { ctx, bus } : null;
@@ -41,21 +57,71 @@ function noiseBuffer(c: AudioContext, seconds: number): AudioBuffer {
   return buf;
 }
 
+function applyBgmLevel() {
+  if (!ctx || !bgmGainNode) return;
+  const level = BGM_LEVEL[bgmMode] * (ducked ? 0.35 : 1);
+  bgmGainNode.gain.setTargetAtTime(level, ctx.currentTime, ducked ? 0.15 : 0.6);
+}
+
 export const audio = {
   unlock() {
     ensure();
   },
-  setVolumes(v: { master: number; sfx: number; ambience: number }) {
+  get context(): AudioContext | null {
+    return ensure()?.ctx ?? null;
+  },
+  get voiceBus(): GainNode | null {
+    return ensure()?.bus.voice ?? null;
+  },
+  setVolumes(v: { master: number; sfx: number; ambience: number; bgm: number; voice: number }) {
+    userBgm = v.bgm;
     if (!bus || !ctx) return;
     const t = ctx.currentTime;
     bus.master.gain.setTargetAtTime(v.master, t, 0.05);
     bus.sfx.gain.setTargetAtTime(v.sfx, t, 0.05);
     bus.amb.gain.setTargetAtTime(v.ambience, t, 0.05);
+    bus.bgm.gain.setTargetAtTime(userBgm, t, 0.05);
+    bus.voice.gain.setTargetAtTime(v.voice, t, 0.05);
   },
   setMuted(muted: boolean) {
     if (!ctx) return;
-    if (muted) void ctx.suspend();
-    else void ctx.resume();
+    if (muted) {
+      void ctx.suspend();
+      bgmEl?.pause();
+    } else {
+      void ctx.resume();
+      if (bgmMode !== "off") void bgmEl?.play().catch(() => undefined);
+    }
+  },
+  /** Background music; keeps playing across title -> game navigation. */
+  bgm(mode: BgmMode) {
+    const e = ensure();
+    if (!e) return;
+    if (!bgmEl) {
+      bgmEl = new Audio(BGM_SRC);
+      bgmEl.loop = true;
+      bgmEl.preload = "auto";
+      bgmEl.crossOrigin = "anonymous";
+      const src = e.ctx.createMediaElementSource(bgmEl);
+      bgmGainNode = e.ctx.createGain();
+      bgmGainNode.gain.value = 0;
+      src.connect(bgmGainNode).connect(e.bus.bgm);
+    }
+    bgmMode = mode;
+    applyBgmLevel();
+    if (mode === "off") {
+      const el = bgmEl;
+      setTimeout(() => {
+        if (bgmMode === "off") el.pause();
+      }, 1500);
+    } else if (bgmEl.paused) {
+      void bgmEl.play().catch(() => undefined);
+    }
+  },
+  duck(on: boolean) {
+    if (ducked === on) return;
+    ducked = on;
+    applyBgmLevel();
   },
   ambience(mode: "room" | "memory" | "off") {
     const e = ensure();
@@ -74,23 +140,10 @@ export const audio = {
     filter.type = "lowpass";
     filter.frequency.value = mode === "room" ? 220 : 600;
     const g = c.createGain();
-    g.gain.value = mode === "room" ? 0.22 : 0.08;
+    g.gain.value = mode === "room" ? 0.16 : 0.05;
     src.connect(filter).connect(g).connect(b.amb);
     src.start();
-    const oscs: OscillatorNode[] = [];
-    if (mode === "memory") {
-      // warm, slow pad (A major-ish, detuned)
-      for (const f of [110, 164.8, 220.5, 277.2]) {
-        const o = c.createOscillator();
-        o.type = "triangle";
-        o.frequency.value = f;
-        const og = c.createGain();
-        og.gain.value = 0.025;
-        o.connect(og).connect(b.amb);
-        o.start();
-        oscs.push(o);
-      }
-    } else {
+    if (mode === "room") {
       // grandfather clock tick
       let tock = false;
       tickTimer = setInterval(() => {
@@ -100,7 +153,7 @@ export const audio = {
         o.frequency.value = tock ? 1400 : 1900;
         tock = !tock;
         const tg = c.createGain();
-        tg.gain.setValueAtTime(0.05, t);
+        tg.gain.setValueAtTime(0.045, t);
         tg.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
         const bp = c.createBiquadFilter();
         bp.type = "bandpass";
@@ -114,7 +167,6 @@ export const audio = {
       mode,
       stop() {
         src.stop();
-        oscs.forEach((o) => o.stop());
       },
     };
   },

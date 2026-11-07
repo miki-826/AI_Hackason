@@ -10,18 +10,15 @@ import { createRng } from "@/game-core/seed/prng";
 import type { QualityPreset } from "@/stores/settings";
 import { useGameStore } from "@/stores/gameStore";
 import { FURNITURE_MODELS } from "./furniture/FurnitureModels";
-import { brassMaterial, floorTexture, plainMaterial, wallTexture, woodMaterial, PALETTE } from "./materials";
+import { brassMaterial, floorMaterial, plainMaterial, wallMaterial, woodMaterial, PALETTE } from "./materials";
 
 export type InteractionUserData = { interactionId: string; kind: "furniture" | "seal_panel" | "exit_door"; label: string };
 
 // ---------------------------------------------------------------- shell --
 const RoomShell = memo(function RoomShell() {
-  const floorMat = useMemo(
-    () => new THREE.MeshStandardMaterial({ map: floorTexture(), roughness: 0.82, color: "#9a8a78" }),
-    [],
-  );
-  const wallMat = useMemo(() => new THREE.MeshStandardMaterial({ map: wallTexture(), roughness: 0.95, color: "#b4b8bb" }), []);
-  const ceilingMat = plainMaterial("#1b1f24", 0.95);
+  const floorMat = floorMaterial("present");
+  const wallMat = wallMaterial("present");
+  const ceilingMat = plainMaterial("#2a2622", 0.95);
   const trim = woodMaterial(PALETTE.darkWalnut, 0.7);
   const { width: W, depth: D, height: H } = ROOM;
   return (
@@ -80,15 +77,64 @@ const RoomShell = memo(function RoomShell() {
 });
 
 // ------------------------------------------------------------- lighting --
+const BEAM_VERT = `
+varying vec3 vLocal;
+varying vec3 vNormalV;
+varying vec3 vViewDir;
+void main() {
+  vLocal = position;
+  vec4 mv = modelViewMatrix * vec4(position, 1.0);
+  vNormalV = normalize(normalMatrix * normal);
+  vViewDir = normalize(-mv.xyz);
+  gl_Position = projectionMatrix * mv;
+}`;
+const BEAM_FRAG = `
+uniform vec3 uColor;
+uniform float uOpacity;
+uniform float uHeight;
+varying vec3 vLocal;
+varying vec3 vNormalV;
+varying vec3 vViewDir;
+void main() {
+  float h = clamp((uHeight * 0.5 - vLocal.y) / uHeight, 0.0, 1.0); // 0 at lamp, 1 at floor
+  float edge = pow(abs(dot(vNormalV, vViewDir)), 1.6);             // soft silhouette
+  float a = uOpacity * edge * (1.0 - h) * (1.0 - h * 0.4);
+  gl_FragColor = vec4(uColor, a);
+}`;
+
+function LightBeam() {
+  const uniforms = useMemo(
+    () => ({ uColor: { value: new THREE.Color("#ffd3a0") }, uOpacity: { value: 0.16 }, uHeight: { value: 3.0 } }),
+    [],
+  );
+  return (
+    <mesh position={[0, -2.55, 0]}>
+      <coneGeometry args={[2.0, 3.0, 48, 1, true]} />
+      <shaderMaterial
+        vertexShader={BEAM_VERT}
+        fragmentShader={BEAM_FRAG}
+        uniforms={uniforms}
+        transparent
+        depthWrite={false}
+        side={THREE.DoubleSide}
+        blending={THREE.AdditiveBlending}
+      />
+    </mesh>
+  );
+}
+
 function PendantLamp({ quality }: { quality: QualityPreset }) {
   const light = useRef<THREE.PointLight>(null);
+  const spot = useRef<THREE.SpotLight>(null);
   const bulb = useRef<THREE.MeshBasicMaterial>(null);
+  const target = useMemo(() => new THREE.Object3D(), []);
   useFrame(({ clock }) => {
     const t = clock.elapsedTime;
     // slow, irregular flicker
     const f = 1 - Math.max(0, Math.sin(t * 7.3) * Math.sin(t * 2.1) * Math.sin(t * 0.37)) * 0.35;
-    if (light.current) light.current.intensity = 16 * f;
-    if (bulb.current) bulb.current.color.setScalar(0.9 * f + 0.1);
+    if (light.current) light.current.intensity = 7 * f;
+    if (spot.current) spot.current.intensity = 60 * f;
+    if (bulb.current) bulb.current.color.setRGB(4 * f, 3.1 * f, 1.9 * f);
   });
   const shadows = quality !== "low";
   return (
@@ -103,17 +149,27 @@ function PendantLamp({ quality }: { quality: QualityPreset }) {
         <sphereGeometry args={[0.06, 12, 12]} />
         <meshBasicMaterial ref={bulb} color="#ffd9a0" toneMapped={false} />
       </mesh>
-      <pointLight
-        ref={light}
-        position={[0, -1.05, 0]}
-        color="#ffc98a"
-        intensity={16}
-        distance={14}
-        decay={1.4}
+      <primitive object={target} position={[0, -ROOM.height, 0]} />
+      <spotLight
+        ref={spot}
+        position={[0, -1.02, 0]}
+        target={target}
+        color="#ffc27c"
+        intensity={60}
+        distance={16}
+        decay={1.6}
+        angle={1.15}
+        penumbra={1}
         castShadow={shadows}
-        shadow-mapSize={quality === "high" ? [1024, 1024] : [512, 512]}
-        shadow-bias={-0.002}
+        shadow-mapSize={quality === "high" ? [2048, 2048] : [1024, 1024]}
+        shadow-bias={-0.0004}
+        shadow-normalBias={0.02}
+        shadow-radius={6}
       />
+      {/* soft fill so walls and ceiling read in the dark */}
+      <pointLight ref={light} position={[0, -1.1, 0]} color="#ffbe80" intensity={7} distance={13} decay={1.5} />
+      {/* soft volumetric beam (fades with height and toward the cone edge) */}
+      {quality !== "low" ? <LightBeam /> : null}
     </group>
   );
 }
@@ -270,9 +326,9 @@ export function RoomScene({
     <>
       <color attach="background" args={["#07090c"]} />
       <fog attach="fog" args={["#07090c", 9, 22]} />
-      <hemisphereLight args={["#6a7c96", "#2a1c12", 0.9]} />
-      <ambientLight intensity={0.35} color="#8f9cb4" />
-      <directionalLight position={[-4, 3.6, 4]} intensity={0.55} color="#8aa0c2" />
+      <hemisphereLight args={["#5d6f8a", "#2a1c12", 0.55]} />
+      <ambientLight intensity={0.12} color="#8f9cb4" />
+      <directionalLight position={[-4, 3.6, 4]} intensity={0.35} color="#8aa0c2" />
       <PendantLamp quality={quality} />
       <group ref={worldRef}>
         <RoomShell />

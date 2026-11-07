@@ -8,9 +8,11 @@ import { useGameStore } from "@/stores/gameStore";
 import { MemoryScene } from "@/components/memory/MemoryScene";
 import { lookInput } from "./inputState";
 import { PlayerRig } from "./PlayerRig";
+import { PostFX, SceneEnvironment } from "./RenderQuality";
 import { RoomScene } from "./RoomScene";
 
-const LOCKABLE = new Set(["EXPLORING", "ESCAPE", "MEMORY_OBSERVE", "MEMORY_EXPLORE"]);
+/** Pointer lock (hidden cursor) only while walking; every other phase keeps the cursor visible. */
+const LOCKABLE = new Set(["EXPLORING", "ESCAPE"]);
 
 /** WebGL canvas: the present room, or the memory set while a memory plays. */
 export default function GameCanvas() {
@@ -29,13 +31,17 @@ export default function GameCanvas() {
     const onDown = (e: MouseEvent) => {
       if (e.button !== 0) return;
       const s = useGameStore.getState();
-      if (!LOCKABLE.has(s.phase) || s.journalOpen || s.settingsOpen) return;
+      if (s.phase === "MEMORY_EXPLORE") {
+        // memories use the visible cursor: click the glowing fragment directly
+        if (aimed.current) void s.collectFragment();
+        return;
+      }
+      if (!LOCKABLE.has(s.phase) || s.journalOpen || s.settingsOpen || s.manualOpen) return;
       if (document.pointerLockElement !== el) {
         void el.requestPointerLock?.();
         return;
       }
-      if (s.phase === "MEMORY_EXPLORE" && aimed.current) void s.collectFragment();
-      else if (s.focusTarget) s.interact();
+      if (s.focusTarget) s.interact();
     };
     const onMove = (e: MouseEvent) => {
       if (document.pointerLockElement !== el) return;
@@ -47,7 +53,7 @@ export default function GameCanvas() {
       const s = useGameStore.getState();
       s.setPointerLocked(locked);
       // ESC released the lock during gameplay -> pause (spec 2.2)
-      if (!locked && LOCKABLE.has(s.phase) && !s.journalOpen && !s.settingsOpen && !s.controlsOpen) s.pause();
+      if (!locked && LOCKABLE.has(s.phase) && !s.journalOpen && !s.settingsOpen && !s.controlsOpen && !s.manualOpen) s.pause();
     };
     el.addEventListener("mousedown", onDown);
     document.addEventListener("mousemove", onMove);
@@ -56,7 +62,7 @@ export default function GameCanvas() {
       if (s.phase !== prev.phase && !LOCKABLE.has(s.phase) && document.pointerLockElement === el) {
         document.exitPointerLock();
       }
-      if ((s.journalOpen && !prev.journalOpen) || (s.settingsOpen && !prev.settingsOpen)) {
+      if ((s.journalOpen && !prev.journalOpen) || (s.settingsOpen && !prev.settingsOpen) || (s.manualOpen && !prev.manualOpen)) {
         if (document.pointerLockElement === el) document.exitPointerLock();
       }
     });
@@ -76,16 +82,18 @@ export default function GameCanvas() {
     <div
       ref={wrapper}
       className="fixed inset-0 h-dvh w-dvw transition-[filter] duration-700"
-      style={{ filter: showMemory ? "sepia(0.45) saturate(1.25) contrast(1.06) brightness(1.04)" : "none" }}
+      style={{ filter: showMemory ? "sepia(0.22) saturate(1.12)" : "none" }}
     >
       <Canvas
-        shadows={quality !== "low"}
+        shadows={quality === "low" ? false : "soft"}
+        flat={quality !== "low"}
         resize={{ scroll: false, debounce: { scroll: 0, resize: 0 } }}
         dpr={dpr}
         gl={{ antialias: quality !== "low", powerPreference: "high-performance" }}
         camera={{ fov: 70, near: 0.05, far: 60, position: PLAYER.spawn }}
         aria-label="3D の部屋"
       >
+        <SceneEnvironment intensity={showMemory ? 0.35 : 0.18} />
         {showMemory ? (
           <MemoryScene memory={memory} quality={quality} aimedRef={aimed} />
         ) : furniture ? (
@@ -94,6 +102,7 @@ export default function GameCanvas() {
             <PlayerRig furniture={furniture} world={world} />
           </>
         ) : null}
+        <PostFX quality={quality} warm={Boolean(showMemory)} />
       </Canvas>
       {showMemory ? (
         <div

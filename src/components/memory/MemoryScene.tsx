@@ -20,8 +20,8 @@ import {
   DrawerModel,
   MirrorModel,
 } from "@/components/game/furniture/FurnitureModels";
-import { consumeLook } from "@/components/game/inputState";
-import { floorTexture, memoryWallTexture, plainMaterial, PALETTE, woodMaterial } from "@/components/game/materials";
+import { narrator } from "@/lib/audio/narrator";
+import { floorMaterial, plainMaterial, PALETTE, wallMaterial, woodMaterial } from "@/components/game/materials";
 
 /**
  * The past version of the room, seen from the object's own eye
@@ -40,9 +40,9 @@ const STANDING_ACTIONS: ReadonlySet<MemoryAction> = new Set(["STAND_UP", "CHECK_
 
 // ------------------------------------------------------------------ set --
 const MemorySet = memo(function MemorySet() {
-  const wall = useMemo(() => new THREE.MeshStandardMaterial({ map: memoryWallTexture(), roughness: 0.9, color: "#e0c39a" }), []);
-  const floor = useMemo(() => new THREE.MeshStandardMaterial({ map: floorTexture(), roughness: 0.7, color: "#d0a878" }), []);
-  const cloth = plainMaterial("#efe3c8", 0.95);
+  const wall = wallMaterial("memory");
+  const floor = floorMaterial("memory");
+  const cloth = plainMaterial("#cdbd9c", 0.95);
   const table = woodMaterial(PALETTE.oak, 0.55);
   const hw = SET.w / 2;
   const hd = SET.d / 2;
@@ -76,10 +76,27 @@ const MemorySet = memo(function MemorySet() {
         </mesh>
       </group>
       {/* … and a window full of evening light */}
-      <mesh position={[hw - 0.02, 1.7, -1.0]} rotation={[0, -Math.PI / 2, 0]}>
-        <planeGeometry args={[1.3, 1.1]} />
-        <meshBasicMaterial color="#ffc27a" toneMapped={false} />
-      </mesh>
+      <group position={[hw - 0.02, 1.7, -1.0]} rotation={[0, -Math.PI / 2, 0]}>
+        <mesh>
+          <planeGeometry args={[1.3, 1.1]} />
+          <meshBasicMaterial color="#ffc988" toneMapped={false} />
+        </mesh>
+        <mesh position={[0, -0.25, 0.002]}>
+          <planeGeometry args={[1.3, 0.6]} />
+          <meshBasicMaterial color="#b65a3a" toneMapped={false} transparent opacity={0.55} />
+        </mesh>
+        {[-0.65, 0, 0.65].map((x) => (
+          <mesh key={`v${x}`} position={[x, 0, 0.02]} material={woodMaterial(PALETTE.walnut)}>
+            <boxGeometry args={[0.06, 1.16, 0.04]} />
+          </mesh>
+        ))}
+        {[-0.55, 0, 0.55].map((y) => (
+          <mesh key={`h${y}`} position={[0, y, 0.02]} material={woodMaterial(PALETTE.walnut)}>
+            <boxGeometry args={[1.36, 0.06, 0.04]} />
+          </mesh>
+        ))}
+        <pointLight position={[0, 0, 0.6]} color="#ffb070" intensity={2.2} distance={4} decay={2} />
+      </group>
       {/* dining table */}
       <group>
         <mesh position={[0, 0.76, 0]} material={table} castShadow receiveShadow>
@@ -142,20 +159,33 @@ const MemorySet = memo(function MemorySet() {
 });
 
 // ---------------------------------------------------------------- actor --
-type ActorShape = { body: THREE.LatheGeometry; head: THREE.SphereGeometry };
+type ActorShape = { torso: THREE.LatheGeometry; head: THREE.SphereGeometry; limb: THREE.CapsuleGeometry; arm: THREE.CapsuleGeometry };
 
+/** Stylised human figure: lathe torso with shoulders, ellipsoid head, capsule limbs. */
 function useActorShape(): ActorShape {
   return useMemo(() => {
     const profile = [
-      [0.0, 0],
-      [0.17, 0.02],
-      [0.2, 0.5],
-      [0.16, 0.9],
-      [0.21, 1.25],
-      [0.12, 1.4],
-      [0.05, 1.45],
+      [0.0, 0.84],
+      [0.15, 0.86],
+      [0.165, 0.95],
+      [0.15, 1.1],
+      [0.17, 1.28],
+      [0.2, 1.38],
+      [0.16, 1.44],
+      [0.065, 1.47],
+      [0.06, 1.56],
+      [0.0, 1.58],
     ].map(([x, y]) => new THREE.Vector2(x, y));
-    return { body: new THREE.LatheGeometry(profile, 20), head: new THREE.SphereGeometry(0.11, 20, 16) };
+    const torso = new THREE.LatheGeometry(profile, 24);
+    torso.scale(1, 1, 0.68);
+    const head = new THREE.SphereGeometry(0.1, 24, 18);
+    head.scale(0.9, 1.15, 1);
+    return {
+      torso,
+      head,
+      limb: new THREE.CapsuleGeometry(0.06, 0.72, 6, 12),
+      arm: new THREE.CapsuleGeometry(0.042, 0.52, 6, 12),
+    };
   }, []);
 }
 
@@ -164,11 +194,11 @@ function MemoryActor({ id, shape, scale }: { id: ActorId; shape: ActorShape; sca
   const material = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
-        color: "#f3c98f",
-        emissive: "#f0a24a",
-        emissiveIntensity: 0.35,
+        color: "#ffd29a",
+        emissive: "#ff9a3c",
+        emissiveIntensity: 0.5,
         transparent: true,
-        opacity: 0.62,
+        opacity: 0.5,
         roughness: 0.6,
         depthWrite: false,
       }),
@@ -177,6 +207,10 @@ function MemoryActor({ id, shape, scale }: { id: ActorId; shape: ActorShape; sca
   useEffect(() => () => material.dispose(), [material]);
   const seat = SEATS[id];
 
+  const legL = useRef<THREE.Group>(null);
+  const legR = useRef<THREE.Group>(null);
+  const armL = useRef<THREE.Group>(null);
+  const armR = useRef<THREE.Group>(null);
   useFrame(({ clock }, delta) => {
     const g = group.current;
     if (!g) return;
@@ -190,22 +224,42 @@ function MemoryActor({ id, shape, scale }: { id: ActorId; shape: ActorShape; sca
     const k = 1 - Math.exp(-2.4 * delta);
     g.position.x += (target[0] - g.position.x) * k;
     g.position.z += (target[2] - g.position.z) * k;
-    const targetY = seated ? -0.42 * scale : 0;
+    const targetY = seated ? -0.4 * scale : 0;
     g.position.y += (targetY - g.position.y) * k;
+    // legs fold forward when seated; arms rest on the table or hang
+    const legX = seated ? -Math.PI / 2 : 0;
+    const walk = !seated && Math.hypot(target[0] - g.position.x, target[2] - g.position.z) > 0.05 ? Math.sin(clock.elapsedTime * 7) * 0.35 : 0;
+    if (legL.current) legL.current.rotation.x += (legX + walk - legL.current.rotation.x) * k;
+    if (legR.current) legR.current.rotation.x += (legX - walk - legR.current.rotation.x) * k;
+    const armX = seated ? -1.1 : isActive && event?.action === "PLACE_LETTER" ? -1.2 : -walk * 0.6;
+    if (armL.current) armL.current.rotation.x += (armX - armL.current.rotation.x) * k;
+    if (armR.current) armR.current.rotation.x += (armX - armR.current.rotation.x) * k;
     // face what the event is about, else the table
     const look = isActive && event?.cameraTargetId ? MEMORY_TARGETS[event.cameraTargetId] : MEMORY_TARGETS.dining_table;
     const wantYaw = atHome && !isActive ? seat.yaw : Math.atan2(look[0] - g.position.x, look[2] - g.position.z);
     let dy = wantYaw - g.rotation.y;
     dy = Math.atan2(Math.sin(dy), Math.cos(dy));
     g.rotation.y += dy * k;
-    material.emissiveIntensity += ((isActive ? 0.95 : 0.3) - material.emissiveIntensity) * k;
-    material.opacity = (isActive ? 0.75 : 0.55) + Math.sin(clock.elapsedTime * 1.3 + scale * 7) * 0.05;
+    material.emissiveIntensity += ((isActive ? 1.1 : 0.45) - material.emissiveIntensity) * k;
+    material.opacity = (isActive ? 0.62 : 0.42) + Math.sin(clock.elapsedTime * 1.3 + scale * 7) * 0.05;
   });
 
   return (
     <group ref={group} position={seat.pos} rotation={[0, seat.yaw, 0]} scale={scale}>
-      <mesh geometry={shape.body} material={material} />
-      <mesh geometry={shape.head} material={material} position={[0, 1.58, 0]} />
+      <mesh geometry={shape.torso} material={material} />
+      <mesh geometry={shape.head} material={material} position={[0, 1.655, 0.01]} />
+      <group ref={legL} position={[-0.085, 0.86, 0]}>
+        <mesh geometry={shape.limb} material={material} position={[0, -0.42, 0]} />
+      </group>
+      <group ref={legR} position={[0.085, 0.86, 0]}>
+        <mesh geometry={shape.limb} material={material} position={[0, -0.42, 0]} />
+      </group>
+      <group ref={armL} position={[-0.215, 1.36, 0]} rotation={[0, 0, 0.08]}>
+        <mesh geometry={shape.arm} material={material} position={[0, -0.3, 0]} />
+      </group>
+      <group ref={armR} position={[0.215, 1.36, 0]} rotation={[0, 0, -0.08]}>
+        <mesh geometry={shape.arm} material={material} position={[0, -0.3, 0]} />
+      </group>
     </group>
   );
 }
@@ -281,9 +335,13 @@ function Fragment({ position, aimedRef }: { position: THREE.Vector3; aimedRef: R
 }
 
 // -------------------------------------------------- camera + timeline --
+const MAX_SPEECH_WAIT_MS = 9000;
+
 function MemoryDirector({ memory, anchor, fragmentPos, aimedRef }: { memory: MemoryPlayback; anchor: { position: Vec3; lookAt: MemoryTargetId }; fragmentPos: THREE.Vector3 | null; aimedRef: React.RefObject<boolean> }) {
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
+  const gl = useThree((s) => s.gl);
   const elapsed = useRef(0);
+  const waited = useRef(0);
   const ended = useRef(false);
   const lookTarget = useRef(new THREE.Vector3(...MEMORY_TARGETS[anchor.lookAt]));
   const offset = useRef({ yaw: 0, pitch: 0 });
@@ -291,27 +349,32 @@ function MemoryDirector({ memory, anchor, fragmentPos, aimedRef }: { memory: Mem
 
   useEffect(() => {
     elapsed.current = 0;
+    waited.current = 0;
     ended.current = false;
     camera.position.set(...anchor.position);
     lookTarget.current.set(...MEMORY_TARGETS[anchor.lookAt]);
   }, [memory.playId, anchor, camera]);
 
-  useFrame((_, rawDelta) => {
+  useFrame(({ pointer }, rawDelta) => {
     const delta = Math.min(rawDelta, 0.05);
     const state = useGameStore.getState();
     const { phase } = state;
 
     // timeline only advances while observing (pauses for explore / clue / pause menu)
+    // and holds while the narrator is still reading the previous line
     if (phase === "MEMORY_OBSERVE" && !ended.current) {
-      elapsed.current += delta * 1000;
       const events = memory.story.events;
       const current = state.memory?.eventIndex ?? -1;
       const next = events[current + 1];
-      if (next && elapsed.current >= next.atMs) {
-        state.showMemoryEvent(current + 1);
-      } else if (!next) {
-        const last = events[events.length - 1];
-        if (!last || elapsed.current >= last.atMs + last.durationMs) {
+      const due = next ? next.atMs : (events[events.length - 1]?.atMs ?? 0) + (events[events.length - 1]?.durationMs ?? 0);
+      if (elapsed.current >= due && narrator.isSpeaking() && waited.current < MAX_SPEECH_WAIT_MS) {
+        waited.current += delta * 1000;
+      } else {
+        elapsed.current += delta * 1000;
+        if (next && elapsed.current >= next.atMs) {
+          waited.current = 0;
+          state.showMemoryEvent(current + 1);
+        } else if (!next && elapsed.current >= due) {
           ended.current = true;
           state.memoryTimelineEnd();
         }
@@ -327,21 +390,18 @@ function MemoryDirector({ memory, anchor, fragmentPos, aimedRef }: { memory: Mem
         : tmp.v.set(...MEMORY_TARGETS[ev?.cameraTargetId ?? anchor.lookAt]);
     lookTarget.current.lerp(want, 1 - Math.exp(-1.6 * delta));
 
-    const look = consumeLook();
+    // Look around with the VISIBLE cursor (no pointer lock inside memories):
+    // the gaze leans toward wherever the cursor is on screen.
     const exploring = phase === "MEMORY_EXPLORE";
-    const yawLimit = exploring ? 1.1 : 0.6;
-    const pitchLimit = exploring ? 0.7 : 0.4;
-    if (state.pointerLocked && (phase === "MEMORY_OBSERVE" || exploring)) {
-      const k = 0.0018 * state.settings.mouseSensitivity;
-      offset.current.yaw = Math.max(-yawLimit, Math.min(yawLimit, offset.current.yaw - look.dx * k));
-      offset.current.pitch = Math.max(-pitchLimit, Math.min(pitchLimit, offset.current.pitch - look.dy * k * (state.settings.invertY ? -1 : 1)));
-    }
-    if (!exploring) {
-      // drift back to the object's natural gaze
-      const back = 1 - Math.exp(-0.6 * delta);
-      offset.current.yaw -= offset.current.yaw * back;
-      offset.current.pitch -= offset.current.pitch * back;
-    }
+    const yawLimit = exploring ? 0.75 : 0.45;
+    const pitchLimit = exploring ? 0.45 : 0.28;
+    const interactive = phase === "MEMORY_OBSERVE" || exploring;
+    const sens = Math.min(1.6, state.settings.mouseSensitivity);
+    const wantYaw = interactive ? -pointer.x * yawLimit * sens : 0;
+    const wantPitch = interactive ? pointer.y * pitchLimit * sens * (state.settings.invertY ? -1 : 1) : 0;
+    const ease = 1 - Math.exp(-3 * delta);
+    offset.current.yaw += (wantYaw - offset.current.yaw) * ease;
+    offset.current.pitch += (wantPitch - offset.current.pitch) * ease;
     camera.position.set(...anchor.position);
     tmp.m.lookAt(camera.position, lookTarget.current, tmp.up);
     tmp.q.setFromRotationMatrix(tmp.m);
@@ -354,13 +414,18 @@ function MemoryDirector({ memory, anchor, fragmentPos, aimedRef }: { memory: Mem
       camera.updateProjectionMatrix();
     }
 
-    // aiming at the fragment?
-    if (fragmentPos) {
-      camera.getWorldDirection(tmp.f);
-      const to = fragmentPos.clone().sub(camera.position).normalize();
-      aimedRef.current = tmp.f.dot(to) > 0.985;
+    // is the cursor over the fragment? (screen-space distance)
+    if (fragmentPos && exploring) {
+      tmp.f.copy(fragmentPos).project(camera);
+      const aspect = gl.domElement.clientWidth / Math.max(1, gl.domElement.clientHeight);
+      const dx = (tmp.f.x - pointer.x) * aspect;
+      const dy = tmp.f.y - pointer.y;
+      const hit = tmp.f.z < 1 && Math.hypot(dx, dy) < 0.12;
+      aimedRef.current = hit;
+      gl.domElement.style.cursor = hit ? "pointer" : "default";
     } else {
       aimedRef.current = false;
+      gl.domElement.style.cursor = "";
     }
   });
   return null;
@@ -375,7 +440,7 @@ function WarmLights({ memory, quality }: { memory: MemoryPlayback; quality: Qual
     const fading = shown.some((e) => e.action === "LIGHT_FADE");
     const k = 1 - Math.exp(-0.8 * delta);
     if (lamp.current) lamp.current.intensity += ((fading ? 2.5 : 8) - lamp.current.intensity) * k;
-    if (candle.current) candle.current.intensity = (fading ? 0.6 : 1.4) + Math.sin(clock.elapsedTime * 11) * 0.15 + Math.sin(clock.elapsedTime * 3.7) * 0.1;
+    if (candle.current) candle.current.intensity = (fading ? 0.4 : 0.9) + Math.sin(clock.elapsedTime * 11) * 0.15 + Math.sin(clock.elapsedTime * 3.7) * 0.1;
   });
   void memory;
   return (
@@ -383,7 +448,7 @@ function WarmLights({ memory, quality }: { memory: MemoryPlayback; quality: Qual
       <ambientLight intensity={0.35} color="#ffd9a8" />
       <hemisphereLight args={["#ffe0b0", "#4a2a14", 0.45]} />
       <pointLight ref={lamp} position={[0, 2.6, 0]} color="#ffc27a" intensity={8} distance={10} decay={1.5} castShadow={quality === "high"} />
-      <pointLight ref={candle} position={[0.05, 1.0, 0.02]} color="#ffb060" intensity={1.4} distance={3} decay={2} />
+      <pointLight ref={candle} position={[0.05, 1.05, 0.02]} color="#ffb060" intensity={1.0} distance={2.6} decay={2} />
       <directionalLight position={[3.6, 2.2, -1]} color="#ffb877" intensity={0.7} />
     </>
   );
