@@ -80,6 +80,8 @@ export type GameState = {
   memorySceneActive: boolean;
   /** 遊び方 slides overlay */
   manualOpen: boolean;
+  /** touch device: drag to look, virtual joystick to move (no pointer lock) */
+  touchControls: boolean;
 };
 
 export type GameActions = {
@@ -130,6 +132,7 @@ export type GameActions = {
   setPointerLocked(locked: boolean): void;
   setMemorySceneActive(active: boolean): void;
   openManual(): void;
+  setTouchControls(on: boolean): void;
   closeManual(): void;
 };
 
@@ -286,6 +289,11 @@ export const useGameStore = create<GameStore>()((set, get) => {
     pointerLocked: false,
     memorySceneActive: false,
     manualOpen: false,
+    touchControls: false,
+
+    setTouchControls(on) {
+      if (get().touchControls !== on) set({ touchControls: on });
+    },
 
     openManual() {
       set({ manualOpen: true });

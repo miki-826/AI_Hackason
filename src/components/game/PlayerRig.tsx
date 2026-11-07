@@ -9,7 +9,7 @@ import { furnitureAabb, resolveCircleAabb } from "@/game-core/generation/geometr
 import { decorAabb } from "@/game-core/generation/placeDecor";
 import type { FurnitureInstance } from "@/game-core/types";
 import { useGameStore } from "@/stores/gameStore";
-import { consumeLook, keysDown, playerPose } from "./inputState";
+import { consumeLook, keysDown, playerPose, touchMove } from "./inputState";
 import type { InteractionUserData } from "./RoomScene";
 
 const ACCEL = 14;
@@ -75,7 +75,7 @@ export function PlayerRig({ furniture, decor, world }: { furniture: FurnitureIns
 
     // look
     const look = consumeLook();
-    if (active && state.pointerLocked) {
+    if (active && (state.pointerLocked || state.touchControls)) {
       const k = 0.0022 * settings.mouseSensitivity;
       playerPose.yaw -= look.dx * k;
       playerPose.pitch -= look.dy * k * (settings.invertY ? -1 : 1);
@@ -90,8 +90,10 @@ export function PlayerRig({ furniture, decor, world }: { furniture: FurnitureIns
       if (keysDown.has("KeyS") || keysDown.has("ArrowDown")) iz += 1;
       if (keysDown.has("KeyA") || keysDown.has("ArrowLeft")) ix -= 1;
       if (keysDown.has("KeyD") || keysDown.has("ArrowRight")) ix += 1;
+      ix += touchMove.x;
+      iz -= touchMove.y;
     }
-    const len = Math.hypot(ix, iz) || 1;
+    const len = Math.max(1, Math.hypot(ix, iz));
     const sin = Math.sin(playerPose.yaw);
     const cos = Math.cos(playerPose.yaw);
     const tx = ((ix * cos + iz * sin) / len) * PLAYER.walkSpeed;

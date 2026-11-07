@@ -33,7 +33,7 @@ export function VoiceToggle({ className = "" }: { className?: string }) {
           <path d="M17 9l5 6M22 9l-5 6" />
         )}
       </svg>
-      <span>読み上げ {on ? "オン" : "オフ"}</span>
+      <span className="max-sm:sr-only">読み上げ {on ? "オン" : "オフ"}</span>
     </button>
   );
 }

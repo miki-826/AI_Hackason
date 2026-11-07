@@ -44,7 +44,33 @@ export default function GameCanvas() {
   useEffect(() => {
     const el = wrapper.current;
     if (!el) return;
+    // touch: drag anywhere on the 3D view to look around, tap to interact
+    const touch = { id: -1, x: 0, y: 0, startX: 0, startY: 0, t: 0 };
+    const onTouchDown = (e: PointerEvent) => {
+      if (e.pointerType !== "touch" || touch.id !== -1) return;
+      touch.id = e.pointerId;
+      touch.x = touch.startX = e.clientX;
+      touch.y = touch.startY = e.clientY;
+      touch.t = performance.now();
+    };
+    const onTouchMove = (e: PointerEvent) => {
+      if (e.pointerId !== touch.id) return;
+      lookInput.dx += (e.clientX - touch.x) * 1.6;
+      lookInput.dy += (e.clientY - touch.y) * 1.6;
+      touch.x = e.clientX;
+      touch.y = e.clientY;
+    };
+    const onTouchUp = (e: PointerEvent) => {
+      if (e.pointerId !== touch.id) return;
+      const tap = Math.hypot(e.clientX - touch.startX, e.clientY - touch.startY) < 10 && performance.now() - touch.t < 350;
+      touch.id = -1;
+      if (!tap) return;
+      const s = useGameStore.getState();
+      if (s.phase === "MEMORY_EXPLORE" && aimed.current) void s.collectFragment();
+      else if (s.focusTarget) s.interact();
+    };
     const onDown = (e: MouseEvent) => {
+      if (useGameStore.getState().touchControls) return; // touch uses the handlers above
       if (e.button !== 0) return;
       const s = useGameStore.getState();
       if (s.phase === "MEMORY_EXPLORE") {
@@ -72,6 +98,10 @@ export default function GameCanvas() {
       if (!locked && LOCKABLE.has(s.phase) && !s.journalOpen && !s.settingsOpen && !s.controlsOpen && !s.manualOpen) s.pause();
     };
     el.addEventListener("mousedown", onDown);
+    el.addEventListener("pointerdown", onTouchDown);
+    window.addEventListener("pointermove", onTouchMove);
+    window.addEventListener("pointerup", onTouchUp);
+    window.addEventListener("pointercancel", onTouchUp);
     document.addEventListener("mousemove", onMove);
     document.addEventListener("pointerlockchange", onLockChange);
     const unsub = useGameStore.subscribe((s, prev) => {
@@ -84,6 +114,10 @@ export default function GameCanvas() {
     });
     return () => {
       el.removeEventListener("mousedown", onDown);
+      el.removeEventListener("pointerdown", onTouchDown);
+      window.removeEventListener("pointermove", onTouchMove);
+      window.removeEventListener("pointerup", onTouchUp);
+      window.removeEventListener("pointercancel", onTouchUp);
       document.removeEventListener("mousemove", onMove);
       document.removeEventListener("pointerlockchange", onLockChange);
       unsub();
@@ -97,7 +131,7 @@ export default function GameCanvas() {
   return (
     <div
       ref={wrapper}
-      className="fixed inset-0 h-dvh w-dvw transition-[filter] duration-700"
+      className="fixed inset-0 h-dvh w-dvw touch-none select-none transition-[filter] duration-700"
       style={{ filter: showMemory ? "sepia(0.22) saturate(1.12)" : "none" }}
     >
       <Canvas

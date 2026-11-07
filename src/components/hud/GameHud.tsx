@@ -11,6 +11,7 @@ import { SettingsDialog } from "@/components/ui/SettingsDialog";
 import { Toast } from "@/components/ui/Toast";
 import { VoiceToggle } from "@/components/ui/VoiceToggle";
 import { ClueJournal } from "./ClueJournal";
+import { TouchJoystick } from "./TouchJoystick";
 import { EndingScreen } from "./EndingScreen";
 import { InspectPanel } from "./InspectPanel";
 import { MemoryOverlay } from "./MemoryOverlay";
@@ -80,11 +81,12 @@ function missionText(p: { requiredCollectedCount: number; requiredClueCount: num
 const PROMPT: Record<string, string> = { furniture: "調べる", seal_panel: `${SEAL_PANEL_NAME}に触れる`, exit_door: "扉を開ける" };
 
 function ExplorationHud() {
-  const { phase, focusTarget, pointerLocked, progress, undecoded, interact, openJournal, pause } = useGameStore(
+  const { phase, focusTarget, pointerLocked, touchControls, progress, undecoded, interact, openJournal, pause } = useGameStore(
     useShallow((s) => ({
       phase: s.phase,
       focusTarget: s.focusTarget,
       pointerLocked: s.pointerLocked,
+      touchControls: s.touchControls,
       progress: s.session?.progress,
       undecoded: s.session?.clues.filter((c) => !c.decoded).length ?? 0,
       interact: s.interact,
@@ -135,7 +137,14 @@ function ExplorationHud() {
           )}
         </div>
       ) : null}
-      {!pointerLocked && phase === "EXPLORING" ? (
+      {touchControls ? (
+        <>
+          <TouchJoystick />
+          {phase === "EXPLORING" ? (
+            <p className="absolute bottom-8 left-1/2 -translate-x-1/2 text-center text-sm text-mist">画面をドラッグで見回す ・ 左のスティックで歩く</p>
+          ) : null}
+        </>
+      ) : !pointerLocked && phase === "EXPLORING" ? (
         <p className="absolute bottom-8 left-1/2 -translate-x-1/2 text-sm text-mist">クリックで視点を操作 ・ ESC で一時停止</p>
       ) : null}
     </>

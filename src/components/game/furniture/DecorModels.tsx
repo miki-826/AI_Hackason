@@ -221,21 +221,27 @@ export const DECOR_MODELS: Record<DecorType, React.ComponentType> = {
 export const Painting = memo(function Painting({ kind }: { kind: PaintingKind }) {
   const def = PAINTINGS[kind];
   const frame = woodMaterial(PALETTE.darkWalnut, 0.35);
-  const canvas = useMemo(
-    () => new THREE.MeshStandardMaterial({ map: photoTexture(def.image), roughness: 0.75, color: "#d8d0c4" }),
-    [def.image],
-  );
+  const canvas = useMemo(() => {
+    const map = photoTexture(def.image);
+    // a single picture, not a tiling texture: clamp so no edge seams appear in mipmaps
+    map.wrapS = THREE.ClampToEdgeWrapping;
+    map.wrapT = THREE.ClampToEdgeWrapping;
+    return new THREE.MeshStandardMaterial({ map, roughness: 0.75, color: "#d8d0c4", polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+  }, [def.image]);
   const f = 0.07;
   return (
     <group>
-      <mesh position={[0, 0, 0.012]} material={canvas}>
+      {/* dark backing board well behind the canvas (no coplanar faces = no z-fighting) */}
+      <mesh position={[0, 0, 0.004]} material={plainMaterial("#1a120c", 0.9)}>
+        <planeGeometry args={[def.w + 0.04, def.h + 0.04]} />
+      </mesh>
+      <mesh position={[0, 0, 0.03]} material={canvas}>
         <planeGeometry args={[def.w, def.h]} />
       </mesh>
       <M geo={rbox(def.w + f * 2, f, 0.05, 0.012)} mat={frame} p={[0, def.h / 2 + f / 2, 0.02]} shadow={false} />
       <M geo={rbox(def.w + f * 2, f, 0.05, 0.012)} mat={frame} p={[0, -def.h / 2 - f / 2, 0.02]} shadow={false} />
       <M geo={rbox(f, def.h, 0.05, 0.012)} mat={frame} p={[-def.w / 2 - f / 2, 0, 0.02]} shadow={false} />
       <M geo={rbox(f, def.h, 0.05, 0.012)} mat={frame} p={[def.w / 2 + f / 2, 0, 0.02]} shadow={false} />
-      <M geo={rbox(def.w + 0.02, def.h + 0.02, 0.008, 0.002)} mat={brassMaterial()} p={[0, 0, 0.008]} shadow={false} />
     </group>
   );
 });

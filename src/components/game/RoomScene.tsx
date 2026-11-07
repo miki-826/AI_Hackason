@@ -18,11 +18,22 @@ import { brassMaterial, floorMaterial, plainMaterial, wallMaterial, woodMaterial
 export type InteractionUserData = { interactionId: string; kind: "furniture" | "seal_panel" | "exit_door"; label: string };
 
 // ---------------------------------------------------------------- shell --
+/** half width of the opening cut into the east-wall trim when the exit door appears */
+const EXIT_HALF_GAP = 0.68;
+
 const RoomShell = memo(function RoomShell({ furniture }: { furniture: FurnitureInstanceData[] }) {
   const floorMat = floorMaterial("present");
   const wallMat = wallMaterial("present");
   const ceilingMat = plainMaterial("#2a2622", 0.95);
   const trim = woodMaterial(PALETTE.darkWalnut, 0.7);
+  // once the exit opens, the east-wall trim must not run across the doorway
+  const doorOpen = useGameStore((s) => Boolean(s.session?.progress.solved));
+  const eastSegments: [number, number][] = doorOpen
+    ? [
+        [ROOM.minZ, -EXIT_HALF_GAP],
+        [EXIT_HALF_GAP, ROOM.maxZ],
+      ]
+    : [[ROOM.minZ, ROOM.maxZ]];
   const { width: W, depth: D, height: H } = ROOM;
   const paperPositions = [
     [-1.8, 2.4, 0.4],
@@ -64,18 +75,23 @@ const RoomShell = memo(function RoomShell({ furniture }: { furniture: FurnitureI
       <mesh position={[ROOM.minX + 0.015, 0.07, 0]} material={trim}>
         <boxGeometry args={[0.03, 0.14, D]} />
       </mesh>
-      <mesh position={[ROOM.maxX - 0.015, 0.07, 0]} material={trim}>
-        <boxGeometry args={[0.03, 0.14, D]} />
-      </mesh>
+      {eastSegments.map(([z0, z1]) => (
+        <mesh key={`skirt-e-${z0}`} position={[ROOM.maxX - 0.015, 0.07, (z0 + z1) / 2]} material={trim}>
+          <boxGeometry args={[0.03, 0.14, z1 - z0]} />
+        </mesh>
+      ))}
       {/* dado rail and a worn carpet give the room a domestic scale */}
       {[-4.98, 4.98].map((z) => (
         <mesh key={`rail-z-${z}`} position={[0, 1.12, z]} material={trim}>
           <boxGeometry args={[W, 0.055, 0.035]} />
         </mesh>
       ))}
-      {[-5.98, 5.98].map((x) => (
-        <mesh key={`rail-x-${x}`} position={[x, 1.12, 0]} material={trim}>
-          <boxGeometry args={[0.035, 0.055, D]} />
+      <mesh position={[-5.98, 1.12, 0]} material={trim}>
+        <boxGeometry args={[0.035, 0.055, D]} />
+      </mesh>
+      {eastSegments.map(([z0, z1]) => (
+        <mesh key={`rail-e-${z0}`} position={[5.98, 1.12, (z0 + z1) / 2]} material={trim}>
+          <boxGeometry args={[0.035, 0.055, z1 - z0]} />
         </mesh>
       ))}
       <mesh position={[0, 0.008, 0.25]} rotation={[-Math.PI / 2, 0, 0]} material={plainMaterial("#3d3029", 0.98)} receiveShadow>

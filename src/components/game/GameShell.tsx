@@ -52,6 +52,7 @@ export function GameShell() {
   useEffect(() => {
     const s = useGameStore.getState();
     s.hydrateSettings();
+    s.setTouchControls(window.matchMedia("(pointer: coarse)").matches || navigator.maxTouchPoints > 0 && !window.matchMedia("(pointer: fine)").matches);
     applyVolumes();
     if (started.current) return;
     started.current = true;

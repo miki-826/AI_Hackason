@@ -11,6 +11,9 @@ export const lookInput = { dx: 0, dy: 0 };
 
 export const keysDown = new Set<string>();
 
+/** virtual joystick (touch): x = right, y = forward, each -1..1 */
+export const touchMove = { x: 0, y: 0 };
+
 /** Present-day player pose. Survives scene swaps (room <-> memory). */
 export const playerPose = {
   position: [...PLAYER.spawn] as Vec3,
