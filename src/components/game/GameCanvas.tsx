@@ -1,7 +1,7 @@
 "use client";
 
 import { Canvas } from "@react-three/fiber";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import type * as THREE from "three";
 import { PLAYER } from "@/game-core/definitions/room";
 import { useGameStore } from "@/stores/gameStore";
@@ -9,7 +9,11 @@ import { MemoryScene } from "@/components/memory/MemoryScene";
 import { lookInput } from "./inputState";
 import { PlayerRig } from "./PlayerRig";
 import { PerformanceMonitor } from "@react-three/drei";
+import { placeDecor } from "@/game-core/generation/placeDecor";
+import type { DecorInstance } from "@/game-core/definitions/decor";
 import { PostFX, SceneEnvironment } from "./RenderQuality";
+
+const EMPTY_DECOR: DecorInstance[] = [];
 import { RoomScene } from "./RoomScene";
 
 /** Pointer lock (hidden cursor) only while walking; every other phase keeps the cursor visible. */
@@ -26,6 +30,9 @@ function downgradeQuality() {
 /** WebGL canvas: the present room, or the memory set while a memory plays. */
 export default function GameCanvas() {
   const furniture = useGameStore((s) => s.session?.furniture);
+  const seed = useGameStore((s) => s.session?.seed);
+  // deterministic set dressing for this session (computed once per layout)
+  const dressing = useMemo(() => (seed && furniture ? placeDecor(seed, furniture) : null), [seed, furniture]);
   const quality = useGameStore((s) => s.settings.quality);
   const memorySceneActive = useGameStore((s) => s.memorySceneActive);
   const memory = useGameStore((s) => s.memory);
@@ -109,8 +116,8 @@ export default function GameCanvas() {
           <MemoryScene memory={memory} quality={quality} aimedRef={aimed} />
         ) : furniture ? (
           <>
-            <RoomScene furniture={furniture} quality={quality} interactive worldRef={world} />
-            <PlayerRig furniture={furniture} world={world} />
+            <RoomScene furniture={furniture} dressing={dressing ?? undefined} quality={quality} interactive worldRef={world} />
+            <PlayerRig furniture={furniture} decor={dressing?.decor ?? EMPTY_DECOR} world={world} />
           </>
         ) : null}
         <PostFX quality={quality} warm={Boolean(showMemory)} />

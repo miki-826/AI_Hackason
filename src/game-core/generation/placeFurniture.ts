@@ -70,6 +70,15 @@ function fits(item: Candidate, placed: FurnitureInstance[]): boolean {
  */
 export function isLayoutTraversable(furniture: FurnitureInstance[]): boolean {
   const boxes = furniture.map((f) => furnitureAabb(f));
+  return isAreaTraversable(boxes, boxes);
+}
+
+/**
+ * Generic BFS check: with `blockers` as obstacles, the spawn must reach every
+ * box in `targets` (within REACH) and the seal panel stand point.
+ */
+export function isAreaTraversable(blockers: Aabb[], targets: Aabb[]): boolean {
+  const boxes = blockers;
   const cols = Math.round(ROOM.width / GRID);
   const rows = Math.round(ROOM.depth / GRID);
   const cx = (i: number) => ROOM.minX + (i + 0.5) * GRID;
@@ -118,7 +127,7 @@ export function isLayoutTraversable(furniture: FurnitureInstance[]): boolean {
       const [px, pz] = closestPointOnAabb(box, x, z);
       return Math.hypot(px - x, pz - z) <= REACH;
     });
-  if (!boxes.every(canReach)) return false;
+  if (!targets.every(canReach)) return false;
   const [sx, , sz] = SEAL_PANEL.standPoint;
   return reached.some(([x, z]) => Math.hypot(x - sx, z - sz) <= 0.6);
 }

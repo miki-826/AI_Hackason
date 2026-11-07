@@ -10,6 +10,8 @@ import { createRng } from "@/game-core/seed/prng";
 import { closestPointOnAabb, furnitureAabb } from "@/game-core/generation/geometry";
 import type { QualityPreset } from "@/stores/settings";
 import { useGameStore } from "@/stores/gameStore";
+import type { DecorInstance, WallArt } from "@/game-core/definitions/decor";
+import { DECOR_MODELS, Painting } from "./furniture/DecorModels";
 import { FURNITURE_MODELS } from "./furniture/FurnitureModels";
 import { brassMaterial, floorMaterial, plainMaterial, wallMaterial, woodMaterial, PALETTE } from "./materials";
 
@@ -338,11 +340,13 @@ function ExitDoor() {
 // ---------------------------------------------------------------- scene --
 export function RoomScene({
   furniture,
+  dressing,
   quality,
   interactive,
   worldRef,
 }: {
   furniture: FurnitureInstanceData[];
+  dressing?: { decor: DecorInstance[]; art: WallArt[] };
   quality: QualityPreset;
   interactive: boolean;
   worldRef?: React.Ref<THREE.Group>;
@@ -357,6 +361,20 @@ export function RoomScene({
       <PendantLamp quality={quality} />
       <group ref={worldRef}>
         <RoomShell furniture={furniture} />
+        {/* set dressing: no memories, not interactive (walls/decor still occlude the raycast) */}
+        {dressing?.decor.map((d) => {
+          const Model = DECOR_MODELS[d.type];
+          return (
+            <group key={d.id} position={d.position} rotation={[0, d.rotationY, 0]}>
+              <Model />
+            </group>
+          );
+        })}
+        {dressing?.art.map((a) => (
+          <group key={a.id} position={a.position} rotation={[0, a.rotationY, 0]}>
+            <Painting kind={a.kind} />
+          </group>
+        ))}
         {furniture.map((f) => (
           <FurnitureInstance key={f.id} data={f} interactive={interactive} />
         ))}

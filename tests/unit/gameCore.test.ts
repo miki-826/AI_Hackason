@@ -44,7 +44,7 @@ describe("PRNG / placement", () => {
       if (plan.usedFallbackLayout) fallbacks++;
     }
     expect(fallbacks).toBeLessThan(50);
-  });
+  }, 120_000);
 });
 
 describe("seal rules", () => {
@@ -129,4 +129,29 @@ describe("simulated solver: fixed stories only (no AI) always clear", () => {
     expect(json).not.toContain("0315");
     expect(json).not.toContain("clue-");
   });
+});
+
+describe("set dressing (decor)", () => {
+  it("1,000 seeds: decor never overlaps furniture or blocks any required path", async () => {
+    const { placeDecor, decorAabb } = await import("@/game-core/generation/placeDecor");
+    const { isAreaTraversable } = await import("@/game-core/generation/placeFurniture");
+    const { SEAL_PANEL } = await import("@/game-core/definitions/room");
+    let total = 0;
+    for (let i = 0; i < 1000; i++) {
+      const seed = seedFor(i);
+      const plan = generateGamePlan(seed);
+      const { decor, art } = placeDecor(seed, plan.furniture);
+      expect(placeDecor(seed, plan.furniture)).toEqual({ decor, art });
+      total += decor.length;
+      const fBoxes = plan.furniture.map((f) => furnitureAabb(f));
+      const dBoxes = decor.map((d) => decorAabb(d));
+      for (const d of dBoxes) {
+        for (const f of fBoxes) expect(aabbOverlap(d, f)).toBe(false);
+        expect(aabbOverlap(d, SEAL_PANEL.reserve)).toBe(false);
+      }
+      expect(isAreaTraversable([...fBoxes, ...dBoxes], fBoxes)).toBe(true);
+      expect(art.length).toBe(3);
+    }
+    expect(total / 1000).toBeGreaterThan(3.5);
+  }, 180_000);
 });

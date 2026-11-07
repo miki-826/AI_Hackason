@@ -4,7 +4,9 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { PLAYER, ROOM } from "@/game-core/definitions/room";
+import type { DecorInstance } from "@/game-core/definitions/decor";
 import { furnitureAabb, resolveCircleAabb } from "@/game-core/generation/geometry";
+import { decorAabb } from "@/game-core/generation/placeDecor";
 import type { FurnitureInstance } from "@/game-core/types";
 import { useGameStore } from "@/stores/gameStore";
 import { consumeLook, keysDown, playerPose } from "./inputState";
@@ -29,9 +31,9 @@ function collide(x: number, z: number, boxes: ReturnType<typeof furnitureAabb>[]
  * First-person controller (WASD + mouse look, capsule-vs-AABB collision)
  * plus the centre-screen interaction raycaster (spec 2.2, 3.4).
  */
-export function PlayerRig({ furniture, world }: { furniture: FurnitureInstance[]; world: React.RefObject<THREE.Group | null> }) {
+export function PlayerRig({ furniture, decor, world }: { furniture: FurnitureInstance[]; decor: DecorInstance[]; world: React.RefObject<THREE.Group | null> }) {
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
-  const boxes = useMemo(() => furniture.map((f) => furnitureAabb(f)), [furniture]);
+  const boxes = useMemo(() => [...furniture.map((f) => furnitureAabb(f)), ...decor.map((d) => decorAabb(d))], [furniture, decor]);
   const velocity = useRef(new THREE.Vector2());
   const frame = useRef(0);
   const raycaster = useMemo(() => {
