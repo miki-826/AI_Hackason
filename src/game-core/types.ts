@@ -117,7 +117,6 @@ export type PublicProgress = {
   puzzleUnlocked: boolean;
   /** Correct code entered — door is open */
   solved: boolean;
-  attemptsLeft: number;
   completedAt: string | null;
   endingId: EndingId | null;
 };

@@ -36,4 +36,3 @@ export const STORY_BIBLE = {
   ],
 } as const;
 
-export const MAX_SEAL_ATTEMPTS = 30;

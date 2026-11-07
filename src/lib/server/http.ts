@@ -41,7 +41,6 @@ const ruleMap: Record<RuleError, [ApiErrorCode, number, string]> = {
   REVISION_CONFLICT: ["CONFLICT", 409, "状態が更新されました。再読み込みしてください。"],
   CLUES_MISSING: ["CLUES_MISSING", 400, "必要な手がかりが揃っていません。"],
   ALREADY_SOLVED: ["ALREADY_SOLVED", 409, "すでに解決済みです。"],
-  NO_ATTEMPTS_LEFT: ["NO_ATTEMPTS_LEFT", 429, "試行回数が残っていません。"],
   NOT_SOLVED: ["NOT_SOLVED", 400, "まだ封印が解かれていません。"],
   VERSION_MISMATCH: ["VERSION_MISMATCH", 409, "セッションのバージョンが一致しません。"],
 };

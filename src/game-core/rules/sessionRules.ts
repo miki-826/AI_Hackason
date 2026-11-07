@@ -7,7 +7,7 @@
  */
 import { CLUE_BY_ID } from "../content/clues";
 import { buildEnding, endingIdFor } from "../content/endings";
-import { MAX_SEAL_ATTEMPTS, STORY_BIBLE } from "../content/storyBible";
+import { STORY_BIBLE } from "../content/storyBible";
 import { ROOM } from "../definitions/room";
 import { generateGamePlan, type GamePlan } from "../generation/generateGamePlan";
 import { checkSeal } from "../puzzle/validateAnswer";
@@ -45,7 +45,6 @@ export type RuleError =
   | "INVALID_FORMAT"
   | "CLUES_MISSING"
   | "ALREADY_SOLVED"
-  | "NO_ATTEMPTS_LEFT"
   | "NOT_SOLVED"
   | "VERSION_MISMATCH";
 
@@ -146,23 +145,22 @@ export function solveSeal(
   record: SessionRecord,
   plan: GamePlan,
   params: { answer: unknown; revision: number; now: string },
-): RuleResult<{ record: SessionRecord; correct: boolean; attemptsLeft: number }> {
+): RuleResult<{ record: SessionRecord; correct: boolean }> {
   if (params.revision !== record.revision) return { ok: false, error: "REVISION_CONFLICT" };
-  const attemptsLeft = MAX_SEAL_ATTEMPTS - record.attemptsUsed;
   const check = checkSeal({
     input: params.answer,
     expectedAnswer: STORY_BIBLE.answer,
     requiredClueIds: plan.requiredClueIds,
     collectedClueIds: foundIds(record),
     solved: record.solvedAt !== null,
-    attemptsLeft,
   });
   if (!check.ok) return { ok: false, error: check.reason };
   if (check.correct) {
-    return { ok: true, correct: true, attemptsLeft, record: bump(record, params.now, { solvedAt: params.now }) };
+    return { ok: true, correct: true, record: bump(record, params.now, { solvedAt: params.now }) };
   }
+  // wrong codes are only counted (no limit); the API rate limit guards brute force
   const next = bump(record, params.now, { attemptsUsed: record.attemptsUsed + 1 });
-  return { ok: true, correct: false, attemptsLeft: attemptsLeft - 1, record: next };
+  return { ok: true, correct: false, record: next };
 }
 
 function clampToRoom(p: Vec3): Vec3 {
@@ -242,7 +240,6 @@ export function toPublicSession(record: SessionRecord, plan: GamePlan): PublicSe
       optionalCollectedCount: optionalCollected,
       puzzleUnlocked: requiredCollected === plan.requiredClueIds.length,
       solved: record.solvedAt !== null,
-      attemptsLeft: MAX_SEAL_ATTEMPTS - record.attemptsUsed,
       completedAt: record.completedAt,
       endingId: record.endingId,
     },

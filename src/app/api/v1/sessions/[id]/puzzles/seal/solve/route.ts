@@ -10,7 +10,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   if (!rateLimit(`solve:${id}`, 20, 60_000)) return jsonError("RATE_LIMITED", "しばらく待ってから再試行してください。", 429, true);
   const body = await parseBody(request, solveSealBody); if (body instanceof Response) return body;
   const result = solveSeal(session.record, session.plan, { ...body, now: new Date().toISOString() }); if (!result.ok) return ruleError(result.error);
-  const response: SolveSealResponse = { correct: result.correct, unlocked: result.correct, attemptsLeft: result.attemptsLeft,
+  const response: SolveSealResponse = { correct: result.correct, unlocked: result.correct,
     revision: result.record.revision, session: publicSession(result.record, session.plan) };
   return withSession(jsonOk(response), result.record);
 }

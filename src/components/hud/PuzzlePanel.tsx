@@ -10,10 +10,9 @@ const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
 
 /** SC-08: 4-digit seal input. */
 export function PuzzlePanel() {
-  const { puzzle, attemptsLeft, submitCode, closePuzzle, openJournal } = useGameStore(
+  const { puzzle, submitCode, closePuzzle, openJournal } = useGameStore(
     useShallow((s) => ({
       puzzle: s.puzzle,
-      attemptsLeft: s.session?.progress.attemptsLeft ?? 0,
       submitCode: s.submitCode,
       closePuzzle: s.closePuzzle,
       openJournal: s.openJournal,
@@ -86,7 +85,7 @@ export function PuzzlePanel() {
           </button>
         </div>
         <div className="mt-4 flex items-center justify-between text-sm">
-          <span className="text-mist">残り {attemptsLeft} 回</span>
+          <span className="text-mist">何度でも試せる</span>
           <button type="button" className="text-brass-bright underline-offset-4 hover:underline" onClick={openJournal}>
             手掛かり帳を見る
           </button>

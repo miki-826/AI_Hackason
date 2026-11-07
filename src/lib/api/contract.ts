@@ -17,7 +17,6 @@ export type ApiErrorCode =
   | "RATE_LIMITED"
   | "VERSION_MISMATCH"
   | "CLUES_MISSING"
-  | "NO_ATTEMPTS_LEFT"
   | "ALREADY_SOLVED"
   | "NOT_SOLVED"
   | "INTERNAL";
@@ -95,7 +94,6 @@ export type DecodeClueResponse = { decoded: boolean; session: PublicSession };
 export type SolveSealResponse = {
   correct: boolean;
   unlocked: boolean;
-  attemptsLeft: number;
   revision: number;
   session: PublicSession;
 };

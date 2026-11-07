@@ -607,7 +607,7 @@ export const useGameStore = create<GameStore>()((set, get) => {
             puzzle: {
               submitting: false,
               result: "wrong",
-              message: `装置は沈黙したままだ。（残り ${res.attemptsLeft} 回）`,
+              message: "装置は沈黙したままだ。手掛かりをもう一度確かめよう。",
             },
           });
         }

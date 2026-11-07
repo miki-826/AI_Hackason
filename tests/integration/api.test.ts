@@ -91,7 +91,7 @@ describe("session API", () => {
     const stale = await solve(request(`/${id}/puzzles/seal/solve`, "POST", cookie, { answer: "0000", revision: 1 }), context(id));
     expect(stale.status).toBe(409);
     const wrong = await solve(request(`/${id}/puzzles/seal/solve`, "POST", cookie, { answer: "0000", revision: session.revision }), context(id));
-    const wrongBody = await wrong.json(); expect(wrongBody.correct).toBe(false); expect(wrongBody.attemptsLeft).toBe(29);
+    const wrongBody = await wrong.json(); expect(wrongBody.correct).toBe(false); expect(wrongBody).not.toHaveProperty("attemptsLeft");
     cookie = cookieOf(wrong); session = wrongBody.session;
     const correct = await solve(request(`/${id}/puzzles/seal/solve`, "POST", cookie, { answer: "0315", revision: session.revision }), context(id));
     const correctBody = await correct.json(); expect(correctBody.correct).toBe(true);

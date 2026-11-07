@@ -12,7 +12,7 @@ export function normalizeCode(input: unknown): string | null {
 
 export type SealCheck =
   | { ok: true; correct: boolean }
-  | { ok: false; reason: "INVALID_FORMAT" | "CLUES_MISSING" | "ALREADY_SOLVED" | "NO_ATTEMPTS_LEFT" };
+  | { ok: false; reason: "INVALID_FORMAT" | "CLUES_MISSING" | "ALREADY_SOLVED" };
 
 /**
  * Seal success rule (spec 6.2): required clues collected, answer matches,
@@ -24,10 +24,8 @@ export function checkSeal(params: {
   requiredClueIds: readonly string[];
   collectedClueIds: readonly string[];
   solved: boolean;
-  attemptsLeft: number;
 }): SealCheck {
   if (params.solved) return { ok: false, reason: "ALREADY_SOLVED" };
-  if (params.attemptsLeft <= 0) return { ok: false, reason: "NO_ATTEMPTS_LEFT" };
   const code = normalizeCode(params.input);
   if (code === null) return { ok: false, reason: "INVALID_FORMAT" };
   const collected = new Set(params.collectedClueIds);

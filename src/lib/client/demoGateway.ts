@@ -118,7 +118,6 @@ export const demoGateway: GameGateway = {
     return {
       correct: res.correct,
       unlocked: res.correct,
-      attemptsLeft: res.attemptsLeft,
       revision: res.record.revision,
       session: toPublicSession(res.record, plan),
     };

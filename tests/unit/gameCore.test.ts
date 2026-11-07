@@ -55,8 +55,25 @@ describe("seal rules", () => {
     expect(normalizeCode(315)).toBeNull();
   });
   it("never succeeds without the required clues", () => {
-    const r = checkSeal({ input: "0315", expectedAnswer: "0315", requiredClueIds: ["a", "b"], collectedClueIds: ["a"], solved: false, attemptsLeft: 5 });
+    const r = checkSeal({ input: "0315", expectedAnswer: "0315", requiredClueIds: ["a", "b"], collectedClueIds: ["a"], solved: false });
     expect(r).toEqual({ ok: false, reason: "CLUES_MISSING" });
+  });
+  it("has no attempt limit: 100 wrong codes, then the right one still opens", () => {
+    let record = createSessionRecord({ id: "lim", seed: seedFor(9), now });
+    const plan = generateGamePlan(record.seed);
+    for (const f of plan.furniture.filter((x) => x.required)) {
+      const clue = Object.entries(plan.clueSources).find(([, fid]) => fid === f.id)![0];
+      const r = completeMemory(record, plan, { furnitureId: f.id, observedEventIds: [], foundClueIds: [clue], now });
+      if (!r.ok) throw new Error(r.error);
+      record = r.record;
+    }
+    for (let i = 0; i < 100; i++) {
+      const w = solveSeal(record, plan, { answer: "1111", revision: record.revision, now });
+      if (!w.ok) throw new Error(w.error);
+      record = w.record;
+    }
+    const ok = solveSeal(record, plan, { answer: "0315", revision: record.revision, now });
+    expect(ok.ok && ok.correct).toBe(true);
   });
 });
 
