@@ -117,6 +117,8 @@ export type HealthResponse = {
   /** server-side neural TTS (OpenAI) availability; browser speech is used otherwise */
   tts: "enabled" | "disabled";
   time: string;
+  /** operator hints: env variable NAMES only, never values */
+  config?: { missing: string[]; similarlyNamed: string[]; aiSwitchedOff: boolean; vercelEnv: string };
 };
 
 /** POST /sessions/:id/tts — body; response is audio/mpeg bytes */
