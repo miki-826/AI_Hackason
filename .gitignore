@@ -1,0 +1,13 @@
+node_modules/
+.next/
+out/
+coverage/
+.env
+.env*.local
+.vercel
+*.tsbuildinfo
+next-env.d.ts
+.omc/
+.DS_Store
+codex-*.md
+agy-*.md

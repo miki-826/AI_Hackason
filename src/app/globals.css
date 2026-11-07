@@ -1,0 +1,153 @@
+@import "tailwindcss";
+
+/*
+ * 真実を求めて — design tokens
+ * Deep navy night + scorched walnut + aged brass. Memories glow amber.
+ * Headings: Shippori Mincho B1 (明朝). Body/HUD: Zen Kaku Gothic New (ゴシック).
+ */
+@theme {
+  --color-ink: #0a0e14;
+  --color-night: #121a24;
+  --color-night-2: #1a2430;
+  --color-walnut: #2a1d14;
+  --color-walnut-2: #3a291c;
+  --color-brass: #b8925a;
+  --color-brass-bright: #e3c58f;
+  --color-brass-dim: #6e5636;
+  --color-parchment: #ece1c8;
+  --color-mist: #a3aeb7;
+  --color-ember: #f0a24a;
+  --color-verdigris: #7fb0ab;
+  --color-rust: #d0684c;
+
+  --font-mincho: var(--font-shippori), "Hiragino Mincho ProN", "Yu Mincho", serif;
+  --font-gothic: var(--font-zen-kaku), "Hiragino Sans", "Yu Gothic", sans-serif;
+
+  --ease-veil: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+:root {
+  color-scheme: dark;
+  --panel-border: color-mix(in oklab, var(--color-brass) 55%, transparent);
+  --panel-bg: color-mix(in oklab, var(--color-night) 92%, transparent);
+}
+
+html,
+body {
+  height: 100%;
+  background: var(--color-ink);
+  color: var(--color-parchment);
+  font-family: var(--font-gothic);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  overflow: hidden;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--color-ember) 45%, transparent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brass-bright);
+  outline-offset: 3px;
+}
+
+/* Brass-trimmed panel used across HUD dialogs (see reference images). */
+.brass-panel {
+  position: relative;
+  background:
+    linear-gradient(180deg, color-mix(in oklab, var(--color-night-2) 96%, transparent), var(--panel-bg)),
+    var(--color-night);
+  border: 1px solid var(--panel-border);
+  box-shadow:
+    inset 0 0 0 3px color-mix(in oklab, var(--color-ink) 80%, transparent),
+    inset 0 0 0 4px color-mix(in oklab, var(--color-brass) 22%, transparent),
+    0 24px 60px rgb(0 0 0 / 0.55);
+}
+
+.brass-panel::before,
+.brass-panel::after {
+  content: "";
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--color-brass);
+  pointer-events: none;
+}
+.brass-panel::before {
+  top: 6px;
+  left: 6px;
+  border-right: none;
+  border-bottom: none;
+}
+.brass-panel::after {
+  bottom: 6px;
+  right: 6px;
+  border-left: none;
+  border-top: none;
+}
+
+/* Engraved brass button (title CTA / inspect actions). */
+.brass-button {
+  position: relative;
+  font-family: var(--font-mincho);
+  color: var(--color-brass-bright);
+  background: linear-gradient(180deg, #2a3440 0%, #18212b 100%);
+  border: 1px solid var(--color-brass);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.06),
+    inset 0 0 0 3px #0f151c,
+    inset 0 0 0 4px color-mix(in oklab, var(--color-brass) 35%, transparent);
+  transition:
+    color 180ms var(--ease-veil),
+    box-shadow 180ms var(--ease-veil),
+    transform 120ms var(--ease-veil);
+  cursor: pointer;
+}
+.brass-button:hover:not(:disabled) {
+  color: #fff3dc;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.08),
+    inset 0 0 0 3px #0f151c,
+    inset 0 0 0 4px var(--color-brass),
+    0 0 24px color-mix(in oklab, var(--color-ember) 30%, transparent);
+}
+.brass-button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.brass-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Film grain for the memory veil and title. */
+.grain {
+  pointer-events: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 0.9  0 0 0 0 0.75  0 0 0 0.09 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  mix-blend-mode: overlay;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(7px); }
+  60% { transform: translateX(-5px); }
+  80% { transform: translateX(3px); }
+}
+
+@keyframes fadein {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
