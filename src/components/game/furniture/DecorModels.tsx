@@ -226,7 +226,9 @@ export const Painting = memo(function Painting({ kind }: { kind: PaintingKind })
     // a single picture, not a tiling texture: clamp so no edge seams appear in mipmaps
     map.wrapS = THREE.ClampToEdgeWrapping;
     map.wrapT = THREE.ClampToEdgeWrapping;
-    return new THREE.MeshStandardMaterial({ map, roughness: 0.75, color: "#d8d0c4", polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+    // unlit: no light, specular or environment reflections on the picture (no shimmer);
+    // dimmed so it sits in the dark room instead of glowing
+    return new THREE.MeshBasicMaterial({ map, color: "#6f665c", polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
   }, [def.image]);
   const f = 0.07;
   return (
